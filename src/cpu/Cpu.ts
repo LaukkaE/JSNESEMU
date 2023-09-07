@@ -248,7 +248,48 @@ class CPU {
           break;
         }
         //LDY INSTRUCTIONS
-
+        case OPCODES.LDY_IMMEDIATE: {
+          //2 cycles
+          let data = this.getByte(memory);
+          this.registers.Y = data;
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDY_ZEROPAGE: {
+          //3 cycles
+          let ZeroPageAddress = this.getByte(memory);
+          this.registers.Y = this.readByte(memory, ZeroPageAddress);
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDY_ZEROPAGE_X: {
+          //4 cycles
+          let ZeroPageAddress = this.getByte(memory);
+          let ZeroPageAddressX = this.zeroPageWrappingCheck(
+            ZeroPageAddress,
+            this.registers.X
+          );
+          this.registers.Y = this.readByte(memory, ZeroPageAddressX);
+          this.cycles--;
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDY_ABSOLUTE: {
+          //4 cycles
+          let address = this.getvector(memory);
+          this.registers.Y = this.readByte(memory, address);
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDY_ABSOLUTE_X: {
+          //4 + 1 cycles
+          let address = this.getvector(memory);
+          let addressX = address + this.registers.X;
+          this.pageCrossBoundaryCheck(addressX, address);
+          this.registers.Y = this.readByte(memory, addressX);
+          this.setLDflags();
+          break;
+        }
         case OPCODES.JSR_ABSOLUTE: {
           //6 cycles
           let jumpAddress = this.getvector(memory);

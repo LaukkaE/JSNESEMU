@@ -235,6 +235,84 @@ describe('CPU LDX tests', () => {
     expect(cpu.cycles).toBe(0);
   });
 });
+describe('CPU LDY tests', () => {
+  test('LDY_IMMEDIATE', () => {
+    cpu.reset(mem);
+    mem.memory[0x0] = OPCODES.LDY_IMMEDIATE;
+    mem.memory[0x1] = 0x30;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.registers.Y).toEqual(0x30);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('LDY_ZEROPAGE', () => {
+    cpu.reset(mem);
+    mem.memory[0x0] = OPCODES.LDY_ZEROPAGE;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x0042] = 0x84;
+    cpu.cycles = 3;
+    cpu.execute(mem);
+    expect(cpu.registers.Y).toEqual(0x84);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('LDY_ZEROPAGE_X,wrap', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0xff;
+    mem.memory[0x0] = OPCODES.LDY_ZEROPAGE_X;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x41] = 0x55; //0x42 + 0xff + wrap = 0x41
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.registers.Y).toEqual(0x55);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('LDY_ZEROPAGE_X, no wrap', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0f;
+    mem.memory[0x0] = OPCODES.LDY_ZEROPAGE_X;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x0042 + 0x0f] = 0x55;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.registers.Y).toEqual(0x55);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('LDY_ABSOLUTE', () => {
+    cpu.reset(mem);
+    mem.memory[0x0] = OPCODES.LDY_ABSOLUTE;
+    mem.memory[0x1] = 0x33;
+    mem.memory[0x2] = 0x44; //0x4433
+    mem.memory[0x4433] = 0x69;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.registers.Y).toEqual(0x69);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('LDY_ABSOLUTE_X,Page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x1;
+    mem.memory[0x0] = OPCODES.LDY_ABSOLUTE_X;
+    mem.memory[0x1] = 0xff;
+    mem.memory[0x2] = 0x44; //0x4402
+    mem.memory[0x4500] = 0x69; //0x4402 + 0x1, page cross
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.registers.Y).toEqual(0x69);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('LDY_ABSOLUTE_X, no Page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0f; //hardcode Y
+    mem.memory[0x0] = OPCODES.LDY_ABSOLUTE_X;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x2] = 0x55; //0x5542
+    mem.memory[0x5551] = 0x69; //0x5542 + 0x0f
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.registers.Y).toEqual(0x69);
+    expect(cpu.cycles).toBe(0);
+  });
+});
 
 describe('CPU Jump tests', () => {
   test('JSR + LDA_IMMEDIATE', () => {
