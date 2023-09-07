@@ -4,9 +4,9 @@ class Memory {
   resetMemory() {
     this.memory = new Uint8Array(1024 * 64).fill(0x00);
   }
-  writeWord(word: number, address: number) {
-    this.memory[address] = word & 0xff;
-    this.memory[address + 1] = word >> 8;
+  writevector(vector: number, address: number) {
+    this.memory[address] = vector & 0xff;
+    this.memory[address + 1] = vector >> 8;
   }
 }
 
@@ -18,8 +18,20 @@ enum OPCODES { //num of Cycles
   LDA_ABSOLUTE = 0xad, //4
   LDA_ABSOLUTE_X = 0xbd, //4 + 1
   LDA_ABSOLUTE_Y = 0xb9, //4 + 1
-  LDA_INDIRECT_X = 0xa1, //6
-  LDA_INDIRECT_Y = 0xb1, //4 + 1
+  LDA_INDEXED_INDIRECT_X = 0xa1, //6
+  LDA_INDIRECT_INDEXED_Y = 0xb1, //4 + 1
+  //LDX - Load X Register
+  LDX_IMMEDIATE = 0xa2, //2
+  LDX_ZEROPAGE = 0xa6, //3
+  LDX_ZEROPAGE_Y = 0xb6, //4
+  LDX_ABSOLUTE = 0xae, //4
+  LDX_ABSOLUTE_Y = 0xbe, //4 + 1
+  //LDY - Load Y Register
+  LDY_IMMEDIATE = 0xa0, //2
+  LDY_ZEROPAGE = 0xa4, //3
+  LDY_ZEROPAGE_X = 0xb4, //4
+  LDY_ABSOLUTE = 0xac, //4
+  LDY_ABSOLUTE_X = 0xbc, //4 + 1
 
   //JSR - Jump to Subroutine
   JSR_ABSOLUTE = 0x20, //6
@@ -38,7 +50,7 @@ class CPU {
     C: false, //Carry
     Z: false, //Zero
     I: false, //Interrupt Disable
-    D: false, //Decimal Mode
+    D: false, //Decimal Mode (Tää on disabled NES:issä)
     B: false, //Break Command
     V: false, //Overflow
     N: false, //Negative
@@ -60,11 +72,11 @@ class CPU {
   }
 
   reset(memory: Memory) {
-    this.PC = 0xfffc;
+    memory.resetMemory();
+    this.PC = memory.memory[0xfffc] | (memory.memory[0xfffd] << 8); //  resetissä lue fffc ja fffd combinee ja laita pc. eli 0x10 + 0x42 : pc = 0x4210, tyhjällä muistilla aina 0x0
     this.SP = 0xff;
     this.clearFlags();
     this.clearRegisters();
-    memory.resetMemory();
   }
 
   getByte(memory: Memory) {
@@ -74,18 +86,22 @@ class CPU {
     this.cycles--;
     return byte;
   }
-  getWord(memory: Memory) {
-    //fetch 16 bit word from mem, takes 2 cycles
-    let data = memory.memory[this.PC];
-    console.log('first', memory.memory[this.PC]);
+  getvector(memory: Memory) {
+    //fetch 16 bit vector from mem, takes 2 cycles
+    let firstByte = memory.memory[this.PC];
     this.PC++;
-
-    data |= memory.memory[this.PC] << 8;
-    console.log('second', memory.memory[this.PC]);
-    console.log('combined', data);
+    let secondByte = memory.memory[this.PC];
     this.PC++;
     this.cycles -= 2;
-    return data;
+    return firstByte | (secondByte << 8);
+  }
+  readvector(memory: Memory, address: number) {
+    //read 16 bit vector from mem, takes 2 cycles
+    let firstByte = memory.memory[address];
+    let secondByte = memory.memory[address + 1];
+
+    this.cycles -= 2;
+    return firstByte | (secondByte << 8);
   }
 
   readByte(memory: Memory, address: number) {
@@ -94,53 +110,150 @@ class CPU {
     this.cycles--;
     return byte;
   }
-  setLDAflags() {
+  setLDflags() {
     this.flags.Z = this.registers.A === 0;
     this.flags.N = (this.registers.A & 0b100000000) > 0; //untested
+  }
+  zeroPageWrappingCheck(zeroPageAddress: number, Xregister: number) {
+    //jos x + address menee yli zero pagen, niin wrapataan ympäri eikä mennä seuraavalle sivulle
+    return (zeroPageAddress + Xregister) & 0xff;
+  }
+  pageCrossBoundaryCheck(address: number, secondAddress: number) {
+    //muisti"page" vaihtuu 256 byten välein, jos page vaihtuu kun muistipaikkaan lisätään X tai Y, kuluu ylimääräinen cycle
+    if ((secondAddress & 0xff00) !== (address & 0xff00)) {
+      this.cycles--;
+    }
   }
 
   execute(memory: Memory) {
     while (this.cycles > 0) {
-      let opcode = this.getByte(memory); //takes one cycle
+      let opcode = this.getByte(memory); //1 cycle
       switch (opcode) {
+        //LDA INSTRUCTIONS
         case OPCODES.LDA_IMMEDIATE: {
           //2 cycles
           let data = this.getByte(memory);
           this.registers.A = data;
-          this.setLDAflags();
+          this.setLDflags();
           break;
         }
         case OPCODES.LDA_ZEROPAGE: {
           //3 cycles
           let ZeroPageAddress = this.getByte(memory);
           this.registers.A = this.readByte(memory, ZeroPageAddress);
-          this.setLDAflags();
+          this.setLDflags();
           break;
         }
         case OPCODES.LDA_ZEROPAGE_X: {
           //4 cycles
           let ZeroPageAddress = this.getByte(memory);
-          this.registers.A = this.readByte(
-            memory,
-            ZeroPageAddress + this.registers.X
+          let ZeroPageAddressX = this.zeroPageWrappingCheck(
+            ZeroPageAddress,
+            this.registers.X
           );
+          this.registers.A = this.readByte(memory, ZeroPageAddressX);
           this.cycles--;
-          this.setLDAflags();
+          this.setLDflags();
           break;
         }
         case OPCODES.LDA_ABSOLUTE: {
           //4 cycles
-          let address = this.getWord(memory);
-          console.log(address);
+          let address = this.getvector(memory);
           this.registers.A = this.readByte(memory, address);
-          this.setLDAflags();
+          this.setLDflags();
           break;
         }
+        case OPCODES.LDA_ABSOLUTE_X: {
+          //4 + 1 cycles
+          let address = this.getvector(memory);
+          let addressX = address + this.registers.X;
+          this.pageCrossBoundaryCheck(addressX, address);
+          this.registers.A = this.readByte(memory, addressX);
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDA_ABSOLUTE_Y: {
+          //4 + 1 cycles
+          let address = this.getvector(memory);
+          let addressY = address + this.registers.Y;
+          this.pageCrossBoundaryCheck(addressY, address);
+          this.registers.A = this.readByte(memory, addressY);
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDA_INDEXED_INDIRECT_X: {
+          //6 cycles
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let vector = this.readvector(memory, zeroPageAddressX);
+          this.registers.A = this.readByte(memory, vector);
+          this.setLDflags();
+          this.cycles -= 1;
+          break;
+        }
+        case OPCODES.LDA_INDIRECT_INDEXED_Y: {
+          //5 + 1 cycles
+          let zeroPageAddress = this.getByte(memory);
+          let vector = this.readvector(memory, zeroPageAddress);
+          let vectorY = vector + this.registers.Y;
+          this.pageCrossBoundaryCheck(vectorY, vector);
+          this.registers.A = this.readByte(memory, vectorY);
+          this.setLDflags();
+          break;
+        }
+        //LDX INSTRUCTIONS
+        case OPCODES.LDX_IMMEDIATE: {
+          //2 cycles
+          let data = this.getByte(memory);
+          this.registers.X = data;
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDX_ZEROPAGE: {
+          //3 cycles
+          let ZeroPageAddress = this.getByte(memory);
+          this.registers.X = this.readByte(memory, ZeroPageAddress);
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDX_ZEROPAGE_Y: {
+          //4 cycles
+          let ZeroPageAddress = this.getByte(memory);
+          let ZeroPageAddressY = this.zeroPageWrappingCheck(
+            ZeroPageAddress,
+            this.registers.Y
+          );
+          this.registers.X = this.readByte(memory, ZeroPageAddressY);
+          this.cycles--;
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDX_ABSOLUTE: {
+          //4 cycles
+          let address = this.getvector(memory);
+          this.registers.X = this.readByte(memory, address);
+          this.setLDflags();
+          break;
+        }
+        case OPCODES.LDX_ABSOLUTE_Y: {
+          //4 + 1 cycles
+          let address = this.getvector(memory);
+          let addressY = address + this.registers.Y;
+          this.pageCrossBoundaryCheck(addressY, address);
+          this.registers.X = this.readByte(memory, addressY);
+          this.setLDflags();
+          break;
+        }
+        //LDY INSTRUCTIONS
+
         case OPCODES.JSR_ABSOLUTE: {
           //6 cycles
-          let jumpAddress = this.getWord(memory);
-          memory.writeWord(this.PC - 1, this.SP);
-          this.SP++;
+          let jumpAddress = this.getvector(memory);
+          memory.writevector(this.PC - 1, this.SP);
+          this.SP--;
           this.PC = jumpAddress;
           this.cycles -= 3;
           break;
@@ -152,13 +265,3 @@ class CPU {
   }
 }
 export { CPU, Memory, OPCODES };
-// let cpu = new CPU();
-// let mem = new Memory();
-// cpu.reset(mem);
-// mem.memory[0xfffc] = OPCODES.LDA_ZEROPAGE;
-// mem.memory[0xfffc + 1] = 0x42;
-// mem.memory[0x0042] = 0x84;
-// cpu.cycles = 3;
-
-// cpu.execute(mem);
-// console.log(cpu.registers.A);
