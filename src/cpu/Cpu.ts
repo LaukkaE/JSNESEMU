@@ -14,7 +14,7 @@ class Memory {
 }
 
 enum OPCODES { //num of Cycles
-  // ADC - Add with Carry UNIMPLEMENTED
+  // ADC - Add with Carry
   ADC_IMMEDIATE = 0x69, //2
   ADC_ZEROPAGE = 0x65, //3
   ADC_ZEROPAGE_X = 0x75, //4
@@ -32,6 +32,62 @@ enum OPCODES { //num of Cycles
   AND_ABSOLUTE_Y = 0x39, //4 + 1
   AND_INDEXED_INDIRECT_X = 0x21, //6
   AND_INDIRECT_INDEXED_Y = 0x31, // 5 + 1
+  //ASL - Arithmetic Shift Left
+  ASL_ACCUMULATOR = 0x0a, //2
+  ASL_ZEROPAGE = 0x06, //5
+  ASL_ZEROPAGE_X = 0x16, //6
+  ASL_ABSOLUTE = 0x0e, //6
+  ASL_ABSOLUTE_X = 0x1e, //7
+  // LSR - Logical Shift Right
+  LSR_ACCUMULATOR = 0x4a, //2
+  LSR_ZEROPAGE = 0x46, //5
+  LSR_ZEROPAGE_X = 0x56, //6
+  LSR_ABSOLUTE = 0x4e, //6
+  LSR_ABSOLUTE_X = 0x5e, //7
+  // ROL - Rotate Left
+  ROL_ACCUMULATOR = 0x2a, //2
+  ROL_ZEROPAGE = 0x26, //5
+  ROL_ZEROPAGE_X = 0x36, //6
+  ROL_ABSOLUTE = 0x2e, //6
+  ROL_ABSOLUTE_X = 0x3e, //7
+  // ROR - Rotate Right
+  ROR_ACCUMULATOR = 0x6a, //2
+  ROR_ZEROPAGE = 0x66, //5
+  ROR_ZEROPAGE_X = 0x76, //6
+  ROR_ABSOLUTE = 0x6e, //6
+  ROR_ABSOLUTE_X = 0x7e, //7
+  // EOR - Exclusive OR
+  EOR_IMMEDIATE = 0x49, //2
+  EOR_ZEROPAGE = 0x45, //3
+  EOR_ZEROPAGE_X = 0x55, //4
+  EOR_ABSOLUTE = 0x4d, //4
+  EOR_ABSOLUTE_X = 0x5d, //4 + 1
+  EOR_ABSOLUTE_Y = 0x59, //4 + 1
+  EOR_INDEXED_INDIRECT_X = 0x41, //6
+  EOR_INDIRECT_INDEXED_Y = 0x51, // 5 + 1
+  // ORA - INCLUSIVE OR
+  ORA_IMMEDIATE = 0x09, //2
+  ORA_ZEROPAGE = 0x05, //3
+  ORA_ZEROPAGE_X = 0x15, //4
+  ORA_ABSOLUTE = 0x0d, //4
+  ORA_ABSOLUTE_X = 0x1d, //4 + 1
+  ORA_ABSOLUTE_Y = 0x19, //4 + 1
+  ORA_INDEXED_INDIRECT_X = 0x01, //6
+  ORA_INDIRECT_INDEXED_Y = 0x11, // 5 + 1
+  // Increments & Decrements
+  INX_IMPLIED = 0xe8, //2
+  INY_IMPLIED = 0xc8, //2
+  DEX_IMPLIED = 0xca, //2
+  DEY_IMPLIED = 0x88, //2
+  INC_ZEROPAGE = 0xe6, //5
+  INC_ZEROPAGE_X = 0xf6, //6
+  INC_ABSOLUTE = 0xee, //6
+  INC_ABSOLUTE_X = 0xfe, //7
+  DEC_ZEROPAGE = 0xc6, //5
+  DEC_ZEROPAGE_X = 0xd6, //6
+  DEC_ABSOLUTE = 0xce, //6
+  DEC_ABSOLUTE_X = 0xde, //7
+
   // LDA - Load Accumulator
   LDA_IMMEDIATE = 0xa9, //2
   LDA_ZEROPAGE = 0xa5, //3
@@ -76,6 +132,14 @@ enum OPCODES { //num of Cycles
   TXA_IMPLIED = 0x8a, //2
   TXS_IMPLIED = 0x9a, //2
   TYA_IMPLIED = 0x98, //2
+  //STATUS FLAG CHANGES
+  CLC_IMPLIED = 0x18, //2
+  CLD_IMPLIED = 0xd8, //2 DECIMAL MODE DISABLE
+  CLI_IMPLIED = 0x58, //2
+  CLV_IMPLIED = 0xb8, //2
+  SEC_IMPLIED = 0x38, //2
+  // SED_IMPLIED = 0xf8, //2 DECIMAL MODE ENABLE - Decimal mode is not available in NES
+  SEI_IMPLIED = 0x78, //2
   //JSR - Jump to Subroutine & RTS - Return from Subroutine & JMP - Jump
   JSR_ABSOLUTE = 0x20, //6
   RTS_IMPLIED = 0x60, //6
@@ -84,7 +148,7 @@ enum OPCODES { //num of Cycles
 }
 
 class CPU {
-  cycles = 0; //Ticks
+  cycles = 0; //Ticks to be computed
   PC = 0x0000; //Program counter
   SP = 0x00; //Stack pointer
   registers = {
@@ -160,6 +224,47 @@ class CPU {
     this.flags.Z = register === 0;
     this.flags.N = ((register >> 7) & 1) > 0; //TODO CHECK
   }
+
+  //Function For Left Shift
+  setASLFlagsAndReturnValue(value: number) {
+    let result = value << 1;
+    let finalValue = result & 0xff;
+    this.flags.Z = finalValue === 0;
+    this.flags.C = (result & 0xff00) > 0;
+    this.flags.N = ((finalValue >> 7) & 1) > 0;
+    return finalValue;
+  }
+
+  //Function For Right Shift
+  setLSRFlagsAndReturnValue(value: number) {
+    let result = value >> 1;
+    result &= 0xff;
+    this.flags.Z = result === 0;
+    this.flags.C = (value & 0x01) > 0;
+    this.flags.N = ((result >> 7) & 1) > 0;
+    return result;
+  }
+
+  //Function for Rotate Left
+  setROLFlagsAndReturnValue(value: number) {
+    let result = value << 1; //shift bits to left
+    result &= 0xff; //cull overflow
+    result |= +this.flags.C; //add Carry
+    this.flags.Z = result === 0;
+    this.flags.C = (value & 0x80) > 0; //Carry is set to old bit 7
+    this.flags.N = ((result >> 7) & 1) > 0;
+    return result;
+  }
+  //Function for Rotate Right
+  setRORFlagsAndReturnValue(value: number) {
+    let result = value >> 1; //shift bits to right
+    // result &= 0xff;
+    result |= +this.flags.C << 7; //add Carry as the most significant bit
+    this.flags.Z = result === 0;
+    this.flags.C = (value & 0x01) > 0; //Carry is set to old bit 0
+    this.flags.N = ((result >> 7) & 1) > 0;
+    return result;
+  }
   setADCRegisterAndFlags(value: number) {
     let ABefore = this.registers.A;
     let sumofAddition = value + this.registers.A + +this.flags.C;
@@ -171,11 +276,11 @@ class CPU {
       ((ABefore ^ sumofAddition) & (value ^ sumofAddition) & 0x80) > 0; //When adding two signed numbers results in > 127 ($7F) or < -128 ($80), V is set
   }
   zeroPageWrappingCheck(zeroPageAddress: number, Xregister: number) {
-    //jos x + address menee yli zero pagen, niin wrapataan ympäri eikä mennä seuraavalle sivulle
+    //Zero page ends at 0xff, wrap if overflow instead of exiting zero page
     return (zeroPageAddress + Xregister) & 0xff;
   }
   pageCrossBoundaryCheck(address: number, secondAddress: number) {
-    //muisti"page" vaihtuu 512 byten välein, jos page vaihtuu kun muistipaikkaan lisätään X tai Y, kuluu ylimääräinen cycle
+    //6502 Spends an extra cycle if memory "page" switches
     if ((secondAddress & 0xff00) !== (address & 0xff00)) {
       this.cycles--;
     }
@@ -327,6 +432,459 @@ class CPU {
           let value = this.readByte(memory, vectorY);
           this.registers.A &= value;
           this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        //ASL INSTRUCTIONS
+        case OPCODES.ASL_ACCUMULATOR: {
+          this.registers.A = this.setASLFlagsAndReturnValue(this.registers.A);
+          this.cycles--;
+          break;
+        }
+        case OPCODES.ASL_ZEROPAGE: {
+          let zeroPageAddress = this.getByte(memory);
+          let value = this.readByte(memory, zeroPageAddress);
+          value = this.setASLFlagsAndReturnValue(value);
+          memory.writeByte(zeroPageAddress, value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.ASL_ZEROPAGE_X: {
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let value = this.readByte(memory, zeroPageAddressX);
+          value = this.setASLFlagsAndReturnValue(value);
+          memory.writeByte(zeroPageAddressX, value);
+          this.cycles -= 3;
+          break;
+        }
+        case OPCODES.ASL_ABSOLUTE: {
+          let absoluteAddress = this.getVector(memory);
+          let value = this.readByte(memory, absoluteAddress);
+          value = this.setASLFlagsAndReturnValue(value);
+          memory.writeByte(absoluteAddress, value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.ASL_ABSOLUTE_X: {
+          let address = this.getVector(memory);
+          let addressX = address + this.registers.X;
+          //No page cross check, always 7 cycles
+          let value = this.readByte(memory, addressX);
+          value = this.setASLFlagsAndReturnValue(value);
+          memory.writeByte(addressX, value);
+          this.cycles -= 3;
+          break;
+        }
+        //LSR INSTRUCTIONS
+        case OPCODES.LSR_ACCUMULATOR: {
+          this.registers.A = this.setLSRFlagsAndReturnValue(this.registers.A);
+          this.cycles--;
+          break;
+        }
+        case OPCODES.LSR_ZEROPAGE: {
+          let zeroPageAddress = this.getByte(memory);
+          let value = this.readByte(memory, zeroPageAddress);
+          value = this.setLSRFlagsAndReturnValue(value);
+          memory.writeByte(zeroPageAddress, value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.LSR_ZEROPAGE_X: {
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let value = this.readByte(memory, zeroPageAddressX);
+          value = this.setLSRFlagsAndReturnValue(value);
+          memory.writeByte(zeroPageAddressX, value);
+          this.cycles -= 3;
+          break;
+        }
+        case OPCODES.LSR_ABSOLUTE: {
+          let absoluteAddress = this.getVector(memory);
+          let value = this.readByte(memory, absoluteAddress);
+          value = this.setLSRFlagsAndReturnValue(value);
+          memory.writeByte(absoluteAddress, value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.LSR_ABSOLUTE_X: {
+          let address = this.getVector(memory);
+          let addressX = address + this.registers.X;
+          //No page cross check, always 7 cycles
+          let value = this.readByte(memory, addressX);
+          value = this.setLSRFlagsAndReturnValue(value);
+          memory.writeByte(addressX, value);
+          this.cycles -= 3;
+          break;
+        }
+        //ROL INSTRUCTIONS
+        case OPCODES.ROL_ACCUMULATOR: {
+          this.registers.A = this.setROLFlagsAndReturnValue(this.registers.A);
+          this.cycles--;
+          break;
+        }
+        case OPCODES.ROL_ZEROPAGE: {
+          let zeroPageAddress = this.getByte(memory);
+          let value = this.readByte(memory, zeroPageAddress);
+          value = this.setROLFlagsAndReturnValue(value);
+          memory.writeByte(zeroPageAddress, value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.ROL_ZEROPAGE_X: {
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let value = this.readByte(memory, zeroPageAddressX);
+          value = this.setROLFlagsAndReturnValue(value);
+          memory.writeByte(zeroPageAddressX, value);
+          this.cycles -= 3;
+          break;
+        }
+        case OPCODES.ROL_ABSOLUTE: {
+          let absoluteAddress = this.getVector(memory);
+          let value = this.readByte(memory, absoluteAddress);
+          value = this.setROLFlagsAndReturnValue(value);
+          memory.writeByte(absoluteAddress, value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.ROL_ABSOLUTE_X: {
+          let address = this.getVector(memory);
+          let addressX = address + this.registers.X;
+          //No page cross check, always 7 cycles
+          let value = this.readByte(memory, addressX);
+          value = this.setROLFlagsAndReturnValue(value);
+          memory.writeByte(addressX, value);
+          this.cycles -= 3;
+          break;
+        }
+        //ROR INSTRUCTIONS
+        case OPCODES.ROR_ACCUMULATOR: {
+          this.registers.A = this.setRORFlagsAndReturnValue(this.registers.A);
+          this.cycles--;
+          break;
+        }
+        case OPCODES.ROR_ZEROPAGE: {
+          let zeroPageAddress = this.getByte(memory);
+          let value = this.readByte(memory, zeroPageAddress);
+          value = this.setRORFlagsAndReturnValue(value);
+          memory.writeByte(zeroPageAddress, value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.ROR_ZEROPAGE_X: {
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let value = this.readByte(memory, zeroPageAddressX);
+          value = this.setRORFlagsAndReturnValue(value);
+          memory.writeByte(zeroPageAddressX, value);
+          this.cycles -= 3;
+          break;
+        }
+        case OPCODES.ROR_ABSOLUTE: {
+          let absoluteAddress = this.getVector(memory);
+          let value = this.readByte(memory, absoluteAddress);
+          value = this.setRORFlagsAndReturnValue(value);
+          memory.writeByte(absoluteAddress, value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.ROR_ABSOLUTE_X: {
+          let address = this.getVector(memory);
+          let addressX = address + this.registers.X;
+          //No page cross check, always 7 cycles
+          let value = this.readByte(memory, addressX);
+          value = this.setRORFlagsAndReturnValue(value);
+          memory.writeByte(addressX, value);
+          this.cycles -= 3;
+          break;
+        }
+
+        //EOR INSTRUCTIONS
+        case OPCODES.EOR_IMMEDIATE: {
+          let value = this.getByte(memory);
+          this.registers.A ^= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.EOR_ZEROPAGE: {
+          let zeroPageAddress = this.getByte(memory);
+          let value = this.readByte(memory, zeroPageAddress);
+          this.registers.A ^= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.EOR_ZEROPAGE_X: {
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let value = this.readByte(memory, zeroPageAddressX);
+          this.registers.A ^= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          this.cycles--;
+          break;
+        }
+        case OPCODES.EOR_ABSOLUTE: {
+          let absoluteAddress = this.getVector(memory);
+          let value = this.readByte(memory, absoluteAddress);
+          this.registers.A ^= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.EOR_ABSOLUTE_X: {
+          let address = this.getVector(memory);
+          let addressX = address + this.registers.X;
+          this.pageCrossBoundaryCheck(addressX, address);
+          let value = this.readByte(memory, addressX);
+          this.registers.A ^= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.EOR_ABSOLUTE_Y: {
+          let address = this.getVector(memory);
+          let addressY = address + this.registers.Y;
+          this.pageCrossBoundaryCheck(addressY, address);
+          let value = this.readByte(memory, addressY);
+          this.registers.A ^= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.EOR_INDEXED_INDIRECT_X: {
+          //6 cycles
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let vector = this.readVector(memory, zeroPageAddressX);
+          let value = this.readByte(memory, vector);
+          this.registers.A ^= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          this.cycles -= 1;
+          break;
+        }
+        case OPCODES.EOR_INDIRECT_INDEXED_Y: {
+          //5 + 1 cycles
+          let zeroPageAddress = this.getByte(memory);
+          let vector = this.readVector(memory, zeroPageAddress);
+          let vectorY = vector + this.registers.Y;
+          this.pageCrossBoundaryCheck(vectorY, vector);
+          let value = this.readByte(memory, vectorY);
+          this.registers.A ^= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+
+        //ORA INSTRUCTIONS
+        case OPCODES.ORA_IMMEDIATE: {
+          let value = this.getByte(memory);
+          this.registers.A |= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.ORA_ZEROPAGE: {
+          let zeroPageAddress = this.getByte(memory);
+          let value = this.readByte(memory, zeroPageAddress);
+          this.registers.A |= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.ORA_ZEROPAGE_X: {
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let value = this.readByte(memory, zeroPageAddressX);
+          this.registers.A |= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          this.cycles--;
+          break;
+        }
+        case OPCODES.ORA_ABSOLUTE: {
+          let absoluteAddress = this.getVector(memory);
+          let value = this.readByte(memory, absoluteAddress);
+          this.registers.A |= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.ORA_ABSOLUTE_X: {
+          let address = this.getVector(memory);
+          let addressX = address + this.registers.X;
+          this.pageCrossBoundaryCheck(addressX, address);
+          let value = this.readByte(memory, addressX);
+          this.registers.A |= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.ORA_ABSOLUTE_Y: {
+          let address = this.getVector(memory);
+          let addressY = address + this.registers.Y;
+          this.pageCrossBoundaryCheck(addressY, address);
+          let value = this.readByte(memory, addressY);
+          this.registers.A |= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+        case OPCODES.ORA_INDEXED_INDIRECT_X: {
+          //6 cycles
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let vector = this.readVector(memory, zeroPageAddressX);
+          let value = this.readByte(memory, vector);
+          this.registers.A |= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          this.cycles -= 1;
+          break;
+        }
+        case OPCODES.ORA_INDIRECT_INDEXED_Y: {
+          //5 + 1 cycles
+          let zeroPageAddress = this.getByte(memory);
+          let vector = this.readVector(memory, zeroPageAddress);
+          let vectorY = vector + this.registers.Y;
+          this.pageCrossBoundaryCheck(vectorY, vector);
+          let value = this.readByte(memory, vectorY);
+          this.registers.A |= value;
+          this.setZeroAndNegativeFlags(this.registers.A);
+          break;
+        }
+
+        //INCREMENT & DECREMENT INSTRUCTIONS
+        case OPCODES.INX_IMPLIED: {
+          this.registers.X++;
+          this.registers.X &= 0xff; //wrap if overflow
+          this.cycles--;
+          this.setZeroAndNegativeFlags(this.registers.X);
+          break;
+        }
+        case OPCODES.INY_IMPLIED: {
+          this.registers.Y++;
+          this.registers.Y &= 0xff; //wrap if overflow
+          this.cycles--;
+          this.setZeroAndNegativeFlags(this.registers.Y);
+          break;
+          break;
+        }
+        case OPCODES.DEX_IMPLIED: {
+          this.registers.X--;
+          this.registers.X &= 0xff; //wrap if underflow
+          this.cycles--;
+          this.setZeroAndNegativeFlags(this.registers.X);
+          break;
+        }
+        case OPCODES.DEY_IMPLIED: {
+          this.registers.Y--;
+          this.registers.Y &= 0xff; //wrap if underflow
+          this.cycles--;
+          this.setZeroAndNegativeFlags(this.registers.Y);
+          break;
+        }
+        case OPCODES.INC_ABSOLUTE: {
+          let address = this.getVector(memory);
+          let value = this.readByte(memory, address);
+          value++;
+          value &= 0xff;
+          memory.writeByte(address, value);
+          this.setZeroAndNegativeFlags(value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.INC_ABSOLUTE_X: {
+          let address = this.getVector(memory);
+          let addressX = address + this.registers.X;
+          //no page cross check, always 7 cycles
+          let value = this.readByte(memory, addressX);
+          value++;
+          value &= 0xff;
+          memory.writeByte(addressX, value);
+          this.setZeroAndNegativeFlags(value);
+          this.cycles -= 3;
+          break;
+        }
+        case OPCODES.INC_ZEROPAGE: {
+          let zeroPageAddress = this.getByte(memory);
+          let value = this.readByte(memory, zeroPageAddress);
+          value++;
+          value &= 0xff;
+          memory.writeByte(zeroPageAddress, value);
+          this.setZeroAndNegativeFlags(value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.INC_ZEROPAGE_X: {
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let value = this.readByte(memory, zeroPageAddressX);
+          value++;
+          value &= 0xff;
+          memory.writeByte(zeroPageAddressX, value);
+          this.setZeroAndNegativeFlags(value);
+          this.cycles -= 3;
+          break;
+        }
+        case OPCODES.DEC_ABSOLUTE: {
+          let address = this.getVector(memory);
+          let value = this.readByte(memory, address);
+          value--;
+          value &= 0xff;
+          memory.writeByte(address, value);
+          this.setZeroAndNegativeFlags(value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.DEC_ABSOLUTE_X: {
+          let address = this.getVector(memory);
+          let addressX = address + this.registers.X;
+          //no page cross check, always 7 cycles
+          let value = this.readByte(memory, addressX);
+          value--;
+          value &= 0xff;
+          memory.writeByte(addressX, value);
+          this.setZeroAndNegativeFlags(value);
+          this.cycles -= 3;
+          break;
+        }
+        case OPCODES.DEC_ZEROPAGE: {
+          let zeroPageAddress = this.getByte(memory);
+          let value = this.readByte(memory, zeroPageAddress);
+          value--;
+          value &= 0xff;
+          memory.writeByte(zeroPageAddress, value);
+          this.setZeroAndNegativeFlags(value);
+          this.cycles -= 2;
+          break;
+        }
+        case OPCODES.DEC_ZEROPAGE_X: {
+          let zeroPageAddress = this.getByte(memory);
+          let zeroPageAddressX = this.zeroPageWrappingCheck(
+            zeroPageAddress,
+            this.registers.X
+          );
+          let value = this.readByte(memory, zeroPageAddressX);
+          value--;
+          value &= 0xff;
+          memory.writeByte(zeroPageAddressX, value);
+          this.setZeroAndNegativeFlags(value);
+          this.cycles -= 3;
           break;
         }
 
@@ -649,6 +1207,38 @@ class CPU {
         case OPCODES.TSX_IMPLIED: {
           //TODO : TXS JA TSX SAATTAA OLLA VITUILLAAN
           this.registers.X = this.SP;
+          this.cycles--;
+          break;
+        }
+
+        //STATUS FLAG INSTRUCTIONS
+        case OPCODES.CLC_IMPLIED: {
+          this.flags.C = false;
+          this.cycles--;
+          break;
+        }
+        case OPCODES.CLD_IMPLIED: {
+          this.flags.D = false;
+          this.cycles--;
+          break;
+        }
+        case OPCODES.CLI_IMPLIED: {
+          this.flags.I = false;
+          this.cycles--;
+          break;
+        }
+        case OPCODES.CLV_IMPLIED: {
+          this.flags.V = false;
+          this.cycles--;
+          break;
+        }
+        case OPCODES.SEC_IMPLIED: {
+          this.flags.C = true;
+          this.cycles--;
+          break;
+        }
+        case OPCODES.SEI_IMPLIED: {
+          this.flags.I = true;
           this.cycles--;
           break;
         }
