@@ -25,7 +25,7 @@ describe('CPU LDA tests', () => {
   });
   test('LDA_ZEROPAGE_X, noWrap', () => {
     cpu.reset(mem);
-    cpu.registers.X = 0x0f; //hardcode x
+    cpu.registers.X = 0x0f;
     mem.memory[0x0] = OPCODES.LDA_ZEROPAGE_X;
     mem.memory[0x1] = 0x42;
     mem.memory[0x0042 + 0x0f] = 0x55;
@@ -36,7 +36,7 @@ describe('CPU LDA tests', () => {
   });
   test('LDA_ZEROPAGE_X, wrap', () => {
     cpu.reset(mem);
-    cpu.registers.X = 0x0f; //hardcode x
+    cpu.registers.X = 0x0f;
     mem.memory[0x0] = OPCODES.LDA_ZEROPAGE_X;
     mem.memory[0x1] = 0xff;
     mem.memory[0xe] = 0x55; // 0xff + 0x0f + wrap = 0xe
@@ -58,7 +58,7 @@ describe('CPU LDA tests', () => {
   });
   test('LDA_ABSOLUTE_X, no Page cross', () => {
     cpu.reset(mem);
-    cpu.registers.X = 0x0f; //hardcode x
+    cpu.registers.X = 0x0f;
     mem.memory[0x0] = OPCODES.LDA_ABSOLUTE_X;
     mem.memory[0x1] = 0x42;
     mem.memory[0x2] = 0x55; //0x5542
@@ -70,7 +70,7 @@ describe('CPU LDA tests', () => {
   });
   test('LDA_ABSOLUTE_X,Page cross', () => {
     cpu.reset(mem);
-    cpu.registers.X = 0x1; //hardcode x
+    cpu.registers.X = 0x1;
     mem.memory[0x0] = OPCODES.LDA_ABSOLUTE_X;
     mem.memory[0x1] = 0xff;
     mem.memory[0x2] = 0x44; //0x4402
@@ -82,7 +82,7 @@ describe('CPU LDA tests', () => {
   });
   test('LDA_ABSOLUTE_Y, no Page cross', () => {
     cpu.reset(mem);
-    cpu.registers.Y = 0x0f; //hardcode Y
+    cpu.registers.Y = 0x0f;
     mem.memory[0x0] = OPCODES.LDA_ABSOLUTE_Y;
     mem.memory[0x1] = 0x42;
     mem.memory[0x2] = 0x55; //0x5542
@@ -713,7 +713,7 @@ describe('CPU LDX tests', () => {
   });
   test('LDX_ABSOLUTE_Y,Page cross', () => {
     cpu.reset(mem);
-    cpu.registers.Y = 0x1; //hardcode x
+    cpu.registers.Y = 0x1;
     mem.memory[0x0] = OPCODES.LDX_ABSOLUTE_Y;
     mem.memory[0x1] = 0xff;
     mem.memory[0x2] = 0x44; //0x4402
@@ -725,7 +725,7 @@ describe('CPU LDX tests', () => {
   });
   test('LDX_ABSOLUTE_Y, no Page cross', () => {
     cpu.reset(mem);
-    cpu.registers.Y = 0x0f; //hardcode Y
+    cpu.registers.Y = 0x0f;
     mem.memory[0x0] = OPCODES.LDX_ABSOLUTE_Y;
     mem.memory[0x1] = 0x42;
     mem.memory[0x2] = 0x55; //0x5542
@@ -842,7 +842,7 @@ describe('CPU LDY tests', () => {
   });
   test('LDY_ABSOLUTE_X, no Page cross', () => {
     cpu.reset(mem);
-    cpu.registers.X = 0x0f; //hardcode Y
+    cpu.registers.X = 0x0f;
     mem.memory[0x0] = OPCODES.LDY_ABSOLUTE_X;
     mem.memory[0x1] = 0x42;
     mem.memory[0x2] = 0x55; //0x5542
@@ -1438,6 +1438,221 @@ describe('CPU ADC tests', () => {
     expect(cpu.cycles).toBe(0);
   });
 });
+describe('CPU SBC tests', () => {
+  test('SBC_IMMEDIATE 0x5 - 0x4 with carry = 0x1', () => {
+    cpu.reset(mem);
+    cpu.flags.Z = false;
+    cpu.flags.N = true;
+    cpu.registers.A = 0x5;
+    cpu.flags.C = true;
+    mem.memory[0x0] = OPCODES.SBC_IMMEDIATE;
+    mem.memory[0x1] = 0x04;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0x1);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+  });
+  test('SBC_IMMEDIATE 0x2 - 0x3 underflow', () => {
+    cpu.reset(mem);
+    cpu.registers.A = 0x2;
+    cpu.flags.C = true;
+    mem.memory[0x0] = OPCODES.SBC_IMMEDIATE;
+    mem.memory[0x1] = 0x3;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0xff);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(false);
+    expect(cpu.flags.Z).toBe(false);
+  });
+  test('SBC_ZEROPAGE 0x84 - 2 no carry = 0x81', () => {
+    cpu.reset(mem);
+    cpu.flags.Z = false;
+    cpu.flags.N = true;
+    cpu.registers.A = 0x84;
+    cpu.flags.C = false;
+    mem.memory[0x0] = OPCODES.SBC_ZEROPAGE;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x0042] = 0x2;
+    cpu.cycles = 3;
+    cpu.execute(mem);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.registers.A).toEqual(0x81);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+  });
+  test('SBC_ZEROPAGE_X', () => {
+    cpu.reset(mem);
+    cpu.flags.Z = false;
+    cpu.flags.N = true;
+    cpu.registers.X = 0x5;
+    cpu.registers.A = 0x33;
+    cpu.flags.C = false;
+    mem.memory[0x0] = OPCODES.SBC_ZEROPAGE_X;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x0047] = 0x31;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0x1);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+  });
+  test('SBC_ABSOLUTE', () => {
+    cpu.reset(mem);
+    cpu.flags.Z = false;
+    cpu.flags.N = true;
+    cpu.flags.V = true;
+    cpu.registers.A = 0x1;
+    mem.memory[0x0] = OPCODES.SBC_ABSOLUTE;
+    mem.memory[0x1] = 0x00;
+    mem.memory[0x2] = 0x80;
+    mem.memory[0x8000] = 0xff;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0x1);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(false);
+  });
+  test('SBC_ABSOLUTE_X, no page Cross', () => {
+    cpu.reset(mem);
+    cpu.flags.Z = false;
+    cpu.flags.V = true;
+    cpu.flags.C = true;
+    cpu.registers.A = 0xff;
+    cpu.registers.X = 0x1;
+    mem.memory[0x0] = OPCODES.SBC_ABSOLUTE_X;
+    mem.memory[0x1] = 0x02;
+    mem.memory[0x2] = 0x80;
+    mem.memory[0x8003] = 0xf;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0xf0);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.flags.N).toBe(true);
+  });
+  test('SBC_ABSOLUTE_X,page Cross', () => {
+    cpu.reset(mem);
+    cpu.flags.Z = false;
+    cpu.flags.N = true;
+    cpu.flags.V = true;
+    cpu.registers.A = 0xff;
+    cpu.registers.X = 0xff;
+    mem.memory[0x0] = OPCODES.SBC_ABSOLUTE_X;
+    mem.memory[0x1] = 0x80;
+    mem.memory[0x2] = 0x01;
+    mem.memory[0x0180 + 0xff] = 0x2;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0xfc);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.flags.N).toBe(true);
+  });
+  test('SBC_ABSOLUTE_Y, no page Cross', () => {
+    cpu.reset(mem);
+    cpu.flags.Z = false;
+    cpu.flags.N = true;
+    cpu.flags.V = true;
+    cpu.registers.A = 0xff;
+    cpu.registers.Y = 0x1;
+    mem.memory[0x0] = OPCODES.SBC_ABSOLUTE_Y;
+    mem.memory[0x1] = 0x02;
+    mem.memory[0x2] = 0x80;
+    mem.memory[0x8003] = 0xef;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0xf);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.flags.N).toBe(false);
+  });
+  test('SBC_ABSOLUTE_Y,page Cross', () => {
+    cpu.reset(mem);
+    cpu.flags.Z = false;
+    cpu.flags.N = true;
+    cpu.flags.V = true;
+    cpu.registers.A = 0xff;
+    cpu.registers.Y = 0xff;
+    mem.memory[0x0] = OPCODES.SBC_ABSOLUTE_Y;
+    mem.memory[0x1] = 0x80;
+    mem.memory[0x2] = 0x01;
+    mem.memory[0x0180 + 0xff] = 0x2;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0xfc);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.flags.N).toBe(true);
+  });
+  test('SBC_INDEXED_INDIRECT_X, noWrap', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x10;
+    cpu.registers.A = 0x5;
+    mem.memory[0x0] = OPCODES.SBC_INDEXED_INDIRECT_X;
+    mem.memory[0x1] = 0x4;
+    mem.memory[0x14] = 0x69; // no wrap
+    mem.memory[0x15] = 0x32; // 0x3269
+    mem.memory[0x3269] = 0x44;
+    cpu.cycles = 6;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0xc0);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(false);
+  });
+  test('SBC_INDEXED_INDIRECT_X, wrap around', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x7;
+    cpu.registers.A = 0x5;
+    mem.memory[0x0] = OPCODES.SBC_INDEXED_INDIRECT_X;
+    mem.memory[0x1] = 0xff;
+    mem.memory[0x6] = 0x69; //wrap
+    mem.memory[0x7] = 0x44; //0x4469
+    mem.memory[0x4469] = 0x3;
+    cpu.cycles = 6;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0x1);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('SBC_INDIRECT_INDEXED_Y, page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.Y = 0xff;
+    cpu.registers.A = 0x4;
+    cpu.flags.C = true;
+    mem.memory[0x0] = OPCODES.SBC_INDIRECT_INDEXED_Y;
+    mem.memory[0x1] = 0x10;
+    mem.memory[0x10] = 0x01; //wrap
+    mem.memory[0x11] = 0x80; //wrap
+    mem.memory[0x8100] = 0x2;
+    cpu.cycles = 6;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0x2);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('SBC_INDIRECT_INDEXED_Y, no page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.Y = 0x0;
+    cpu.registers.A = 0x3;
+    mem.memory[0x0] = OPCODES.SBC_INDIRECT_INDEXED_Y;
+    mem.memory[0x1] = 0x10;
+    mem.memory[0x10] = 0x00; //wrap
+    mem.memory[0x11] = 0x02; //wrap
+    mem.memory[0x200] = 0x1;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.registers.A).toEqual(0x1);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+});
 describe('CPU Flag set Tests', () => {
   test('CLC Clears Carry', () => {
     cpu.reset(mem);
@@ -1492,7 +1707,7 @@ describe('CPU Flag set Tests', () => {
     expect(cpu.flags.I).toBe(true);
   });
 });
-describe('CPU DECREMENT & INCREMENT TESTS', () => {
+describe('CPU DECREMENT & INCREMENT tests', () => {
   test('INX_IMPLIED OVERFLOW TEST', () => {
     cpu.reset(mem);
     cpu.registers.X = 0xff;
@@ -1764,7 +1979,7 @@ describe('CPU DECREMENT & INCREMENT TESTS', () => {
     expect(cpu.flags.Z).toBe(false);
   });
 });
-describe('CPU ASL TESTS', () => {
+describe('CPU ASL tests', () => {
   test('ASL_ACC NO CARRY', () => {
     cpu.reset(mem);
     cpu.registers.A = 0x3;
@@ -1892,7 +2107,7 @@ describe('CPU ASL TESTS', () => {
     expect(cpu.flags.C).toEqual(true);
   });
 });
-describe('CPU LSR TESTS', () => {
+describe('CPU LSR tests', () => {
   test('LSR_ACC NO CARRY', () => {
     cpu.reset(mem);
     cpu.registers.A = 0x122;
@@ -2020,7 +2235,7 @@ describe('CPU LSR TESTS', () => {
     expect(cpu.flags.C).toEqual(true);
   });
 });
-describe('CPU ROL TESTS', () => {
+describe('CPU ROL tests', () => {
   test('ROL_ACC NO CARRY', () => {
     cpu.reset(mem);
     cpu.registers.A = 0x65;
@@ -2150,7 +2365,7 @@ describe('CPU ROL TESTS', () => {
     expect(cpu.flags.C).toEqual(true);
   });
 });
-describe('CPU ROR TESTS', () => {
+describe('CPU ROR tests', () => {
   test('ROR_ACC NO CARRY', () => {
     cpu.reset(mem);
     cpu.registers.A = 0x66;
@@ -2280,5 +2495,637 @@ describe('CPU ROR TESTS', () => {
     expect(cpu.cycles).toBe(0);
     expect(mem.memory[0x336b]).toEqual(0xde);
     expect(cpu.flags.C).toEqual(false);
+  });
+});
+describe('CPU CMP tests', () => {
+  test('CMP_IMMEDIATE', () => {
+    cpu.reset(mem);
+    cpu.registers.A = 0x44;
+    mem.memory[0x0] = OPCODES.CMP_IMMEDIATE;
+    mem.memory[0x1] = 0x30;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+  });
+  test('CMP_ZEROPAGE', () => {
+    cpu.reset(mem);
+    cpu.registers.A = 0x84;
+    mem.memory[0x0] = OPCODES.CMP_ZEROPAGE;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x0042] = 0x84;
+    cpu.cycles = 3;
+    cpu.execute(mem);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+  });
+  test('CMP_ZEROPAGE_X, noWrap', () => {
+    cpu.reset(mem);
+    cpu.registers.A = 0x2;
+    cpu.registers.X = 0x0f;
+    mem.memory[0x0] = OPCODES.CMP_ZEROPAGE_X;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x0042 + 0x0f] = 0x55;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(false);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_ZEROPAGE_X, wrap', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0f;
+    cpu.registers.A = 0x99;
+    mem.memory[0x0] = OPCODES.CMP_ZEROPAGE_X;
+    mem.memory[0x1] = 0xff;
+    mem.memory[0xe] = 0x55; // 0xff + 0x0f + wrap = 0xe
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_ABSOLUTE', () => {
+    cpu.reset(mem);
+    cpu.registers.A = 0x69;
+    mem.memory[0x0] = OPCODES.CMP_ABSOLUTE;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x2] = 0x55; //0x5542
+    mem.memory[0x5542] = 0x69;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_ABSOLUTE_X, no Page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0f;
+    cpu.registers.A = 0x80;
+    mem.memory[0x0] = OPCODES.CMP_ABSOLUTE_X;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x2] = 0x55; //0x5542
+    mem.memory[0x5551] = 0x69; //0x5542 + 0x0f
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_ABSOLUTE_X,Page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x1;
+    cpu.registers.A = 0x3;
+    mem.memory[0x0] = OPCODES.CMP_ABSOLUTE_X;
+    mem.memory[0x1] = 0xff;
+    mem.memory[0x2] = 0x44; //0x4402
+    mem.memory[0x4500] = 0x69; //0x4402 + 0x1, page cross
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(false);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_ABSOLUTE_Y, no Page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.Y = 0x0f;
+    cpu.registers.A = 0x0;
+    mem.memory[0x0] = OPCODES.CMP_ABSOLUTE_Y;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x2] = 0x55; //0x5542
+    mem.memory[0x5551] = 0x0; //0x5542 + 0x0f
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_ABSOLUTE_Y,Page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.Y = 0x1;
+    cpu.registers.A = 0xff;
+    mem.memory[0x0] = OPCODES.CMP_ABSOLUTE_Y;
+    mem.memory[0x1] = 0xff;
+    mem.memory[0x2] = 0x44; //0x44ff
+    mem.memory[0x4500] = 0x69; //0x44ff + 0x1, page cross
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_INDEXED_INDIRECT_X, noWrap', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x10;
+    cpu.registers.A = 0x44;
+    mem.memory[0x0] = OPCODES.CMP_INDEXED_INDIRECT_X;
+    mem.memory[0x1] = 0x4;
+    mem.memory[0x14] = 0x69; // no wrap
+    mem.memory[0x15] = 0x32; // 0x3269
+    mem.memory[0x3269] = 0x44;
+    cpu.cycles = 6;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_INDEXED_INDIRECT_X, wrap around', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x7;
+    cpu.registers.A = 0x44;
+    mem.memory[0x0] = OPCODES.CMP_INDEXED_INDIRECT_X;
+    mem.memory[0x1] = 0xff;
+    mem.memory[0x6] = 0x69; //wrap
+    mem.memory[0x7] = 0x44; //0x4469
+    mem.memory[0x4469] = 0x55;
+    cpu.cycles = 6;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(false);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_INDIRECT_INDEXED_Y, page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.Y = 0xff;
+    cpu.registers.A = 0x55;
+    mem.memory[0x0] = OPCODES.CMP_INDIRECT_INDEXED_Y;
+    mem.memory[0x1] = 0x10;
+    mem.memory[0x10] = 0x01; //wrap
+    mem.memory[0x11] = 0x80; //wrap
+    mem.memory[0x8100] = 0x55;
+    cpu.cycles = 6;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CMP_INDIRECT_INDEXED_Y, no page cross', () => {
+    cpu.reset(mem);
+    cpu.registers.Y = 0x0;
+    cpu.registers.A = 0x65;
+    mem.memory[0x0] = OPCODES.CMP_INDIRECT_INDEXED_Y;
+    mem.memory[0x1] = 0x10;
+    mem.memory[0x10] = 0x00; //wrap
+    mem.memory[0x11] = 0x02; //wrap
+    mem.memory[0x200] = 0x55;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.cycles).toBe(0);
+  });
+});
+describe('CPU CPX & CPY tests', () => {
+  test('CPX_IMMEDIATE', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x44;
+    mem.memory[0x0] = OPCODES.CPX_IMMEDIATE;
+    mem.memory[0x1] = 0x30;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+  });
+  test('CPX_ZEROPAGE', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x84;
+    mem.memory[0x0] = OPCODES.CPX_ZEROPAGE;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x0042] = 0x84;
+    cpu.cycles = 3;
+    cpu.execute(mem);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+  });
+  test('CPX_ABSOLUTE', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x69;
+    mem.memory[0x0] = OPCODES.CPX_ABSOLUTE;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x2] = 0x55; //0x5542
+    mem.memory[0x5542] = 0x69;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('CPY_IMMEDIATE', () => {
+    cpu.reset(mem);
+    cpu.registers.Y = 0x44;
+    mem.memory[0x0] = OPCODES.CPY_IMMEDIATE;
+    mem.memory[0x1] = 0x30;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+  });
+  test('CPY_ZEROPAGE', () => {
+    cpu.reset(mem);
+    cpu.registers.Y = 0x84;
+    mem.memory[0x0] = OPCODES.CPY_ZEROPAGE;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x0042] = 0x84;
+    cpu.cycles = 3;
+    cpu.execute(mem);
+    expect(cpu.cycles).toBe(0);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+  });
+  test('CPY_ABSOLUTE', () => {
+    cpu.reset(mem);
+    cpu.registers.Y = 0x69;
+    mem.memory[0x0] = OPCODES.CPY_ABSOLUTE;
+    mem.memory[0x1] = 0x42;
+    mem.memory[0x2] = 0x55; //0x5542
+    mem.memory[0x5542] = 0x69;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+});
+describe('CPU BRANCH tests', () => {
+  test('BCC Jump Forward', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0;
+    cpu.registers.Y = 0x0;
+    mem.memory[0x0] = OPCODES.BCC_RELATIVE;
+    mem.memory[0x1] = 0x2;
+    mem.memory[0x2] = OPCODES.INX_IMPLIED;
+    mem.memory[0x3] = OPCODES.INX_IMPLIED;
+    mem.memory[0x4] = OPCODES.INY_IMPLIED;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x5);
+    expect(cpu.registers.X).toEqual(0x0);
+    expect(cpu.registers.Y).toEqual(0x1);
+  });
+  test('BCC No jump', () => {
+    cpu.reset(mem);
+    cpu.flags.C = true;
+    mem.memory[0x0] = OPCODES.BCC_RELATIVE;
+    mem.memory[0x1] = 0x33;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x2);
+  });
+  test('BCC Jump Backwards', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x50;
+    mem.memory[0x50] = OPCODES.BCC_RELATIVE;
+    mem.memory[0x51] = 0xfa;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x4d);
+  });
+  test('BCS Jump Forward', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0;
+    cpu.registers.Y = 0x0;
+    cpu.flags.C = true;
+    mem.memory[0x0] = OPCODES.BCS_RELATIVE;
+    mem.memory[0x1] = 0x2;
+    mem.memory[0x2] = OPCODES.INX_IMPLIED;
+    mem.memory[0x3] = OPCODES.INX_IMPLIED;
+    mem.memory[0x4] = OPCODES.INY_IMPLIED;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x5);
+    expect(cpu.registers.X).toEqual(0x0);
+    expect(cpu.registers.Y).toEqual(0x1);
+  });
+  test('BCS No jump', () => {
+    cpu.reset(mem);
+    mem.memory[0x0] = OPCODES.BCS_RELATIVE;
+    mem.memory[0x1] = 0x33;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x2);
+  });
+  test('BCS Jump Backwards', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x50;
+    cpu.flags.C = true;
+    mem.memory[0x50] = OPCODES.BCS_RELATIVE;
+    mem.memory[0x51] = 0xfa;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x4d);
+  });
+  test('BEQ Jump Forward', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0;
+    cpu.registers.Y = 0x0;
+    cpu.flags.Z = true;
+    mem.memory[0x0] = OPCODES.BEQ_RELATIVE;
+    mem.memory[0x1] = 0x2;
+    mem.memory[0x2] = OPCODES.INX_IMPLIED;
+    mem.memory[0x3] = OPCODES.INX_IMPLIED;
+    mem.memory[0x4] = OPCODES.INY_IMPLIED;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x5);
+    expect(cpu.registers.X).toEqual(0x0);
+    expect(cpu.registers.Y).toEqual(0x1);
+  });
+  test('BEQ No jump', () => {
+    cpu.reset(mem);
+    mem.memory[0x0] = OPCODES.BEQ_RELATIVE;
+    mem.memory[0x1] = 0x33;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x2);
+  });
+  test('BEQ Jump Backwards', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x50;
+    cpu.flags.Z = true;
+    mem.memory[0x50] = OPCODES.BEQ_RELATIVE;
+    mem.memory[0x51] = 0xfa;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x4d);
+  });
+  test('BMI Jump Forward', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0;
+    cpu.registers.Y = 0x0;
+    cpu.flags.N = true;
+    mem.memory[0x0] = OPCODES.BMI_RELATIVE;
+    mem.memory[0x1] = 0x2;
+    mem.memory[0x2] = OPCODES.INX_IMPLIED;
+    mem.memory[0x3] = OPCODES.INX_IMPLIED;
+    mem.memory[0x4] = OPCODES.INY_IMPLIED;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x5);
+    expect(cpu.registers.X).toEqual(0x0);
+    expect(cpu.registers.Y).toEqual(0x1);
+  });
+  test('BMI No jump', () => {
+    cpu.reset(mem);
+    mem.memory[0x0] = OPCODES.BMI_RELATIVE;
+    mem.memory[0x1] = 0x33;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x2);
+  });
+  test('BMI Jump Backwards', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x50;
+    cpu.flags.N = true;
+    mem.memory[0x50] = OPCODES.BMI_RELATIVE;
+    mem.memory[0x51] = 0xfa;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x4d);
+  });
+  test('BNE Jump Forward', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0;
+    cpu.registers.Y = 0x0;
+    mem.memory[0x0] = OPCODES.BNE_RELATIVE;
+    mem.memory[0x1] = 0x2;
+    mem.memory[0x2] = OPCODES.INX_IMPLIED;
+    mem.memory[0x3] = OPCODES.INX_IMPLIED;
+    mem.memory[0x4] = OPCODES.INY_IMPLIED;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x5);
+    expect(cpu.registers.X).toEqual(0x0);
+    expect(cpu.registers.Y).toEqual(0x1);
+  });
+  test('BNE No jump', () => {
+    cpu.reset(mem);
+    cpu.flags.Z = true;
+    mem.memory[0x0] = OPCODES.BNE_RELATIVE;
+    mem.memory[0x1] = 0x33;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x2);
+  });
+  test('BNE Jump Backwards', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x50;
+    mem.memory[0x50] = OPCODES.BNE_RELATIVE;
+    mem.memory[0x51] = 0xfa;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x4d);
+  });
+  test('BPL Jump Forward', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0;
+    cpu.registers.Y = 0x0;
+    mem.memory[0x0] = OPCODES.BPL_RELATIVE;
+    mem.memory[0x1] = 0x2;
+    mem.memory[0x2] = OPCODES.INX_IMPLIED;
+    mem.memory[0x3] = OPCODES.INX_IMPLIED;
+    mem.memory[0x4] = OPCODES.INY_IMPLIED;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x5);
+    expect(cpu.registers.X).toEqual(0x0);
+    expect(cpu.registers.Y).toEqual(0x1);
+  });
+  test('BPL No jump', () => {
+    cpu.reset(mem);
+    cpu.flags.N = true;
+    mem.memory[0x0] = OPCODES.BPL_RELATIVE;
+    mem.memory[0x1] = 0x33;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x2);
+  });
+  test('BPL Jump Backwards', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x50;
+    mem.memory[0x50] = OPCODES.BPL_RELATIVE;
+    mem.memory[0x51] = 0xfa;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x4d);
+  });
+  test('BVC Jump Forward', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0;
+    cpu.registers.Y = 0x0;
+    mem.memory[0x0] = OPCODES.BVC_RELATIVE;
+    mem.memory[0x1] = 0x2;
+    mem.memory[0x2] = OPCODES.INX_IMPLIED;
+    mem.memory[0x3] = OPCODES.INX_IMPLIED;
+    mem.memory[0x4] = OPCODES.INY_IMPLIED;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x5);
+    expect(cpu.registers.X).toEqual(0x0);
+    expect(cpu.registers.Y).toEqual(0x1);
+  });
+  test('BVC No jump', () => {
+    cpu.reset(mem);
+    cpu.flags.V = true;
+    mem.memory[0x0] = OPCODES.BVC_RELATIVE;
+    mem.memory[0x1] = 0x33;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x2);
+  });
+  test('BVC Jump Backwards', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x50;
+    mem.memory[0x50] = OPCODES.BVC_RELATIVE;
+    mem.memory[0x51] = 0xfa;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x4d);
+  });
+  test('BVS Jump Forward', () => {
+    cpu.reset(mem);
+    cpu.registers.X = 0x0;
+    cpu.registers.Y = 0x0;
+    cpu.flags.V = true;
+    mem.memory[0x0] = OPCODES.BVS_RELATIVE;
+    mem.memory[0x1] = 0x2;
+    mem.memory[0x2] = OPCODES.INX_IMPLIED;
+    mem.memory[0x3] = OPCODES.INX_IMPLIED;
+    mem.memory[0x4] = OPCODES.INY_IMPLIED;
+    cpu.cycles = 5;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x5);
+    expect(cpu.registers.X).toEqual(0x0);
+    expect(cpu.registers.Y).toEqual(0x1);
+  });
+  test('BVS No jump', () => {
+    cpu.reset(mem);
+    mem.memory[0x0] = OPCODES.BVS_RELATIVE;
+    mem.memory[0x1] = 0x33;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x2);
+  });
+  test('BVS Jump Backwards', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x50;
+    cpu.flags.V = true;
+    mem.memory[0x50] = OPCODES.BVS_RELATIVE;
+    mem.memory[0x51] = 0xfa;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x4d);
+  });
+});
+describe('CPU STACK tests', () => {
+  test('PHA Test', () => {
+    cpu.reset(mem);
+    cpu.registers.A = 0x8;
+    mem.memory[0x0] = OPCODES.PHA_IMPLIED;
+    cpu.cycles = 3;
+    cpu.execute(mem);
+    expect(mem.memory[0xff]).toEqual(0x8);
+    expect(cpu.SP).toEqual(0xfe);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('PHP Test', () => {
+    cpu.reset(mem);
+    cpu.flags.N = true;
+    cpu.flags.C = true;
+    mem.memory[0x0] = OPCODES.PHP_IMPLIED;
+    cpu.cycles = 3;
+    cpu.execute(mem);
+    expect(mem.memory[0xff]).toEqual(0x81);
+    expect(cpu.SP).toEqual(0xfe);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('PHA (+ TXA) + PLA Test', () => {
+    cpu.reset(mem);
+    cpu.registers.A = 0x8;
+    cpu.registers.X = 0xff;
+    mem.memory[0x0] = OPCODES.PHA_IMPLIED;
+    mem.memory[0x1] = OPCODES.TXA_IMPLIED;
+    mem.memory[0x2] = OPCODES.PLA_IMPLIED;
+    cpu.cycles = 9;
+    cpu.execute(mem);
+    expect(mem.memory[0xff]).toEqual(0x8);
+    expect(cpu.registers.A).toEqual(0x8);
+    expect(cpu.SP).toEqual(0xff);
+    expect(cpu.cycles).toEqual(0);
+  });
+  test('PLP TEST', () => {
+    cpu.reset(mem);
+    mem.memory[0x0] = OPCODES.PLP_IMPLIED;
+    mem.memory[0xff] = 0xc1; // 1100 0001
+    cpu.SP--;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.N).toBe(true);
+    expect(cpu.flags.V).toBe(true);
+  });
+  test('PHP (+ clears)+ PLP TEST', () => {
+    cpu.reset(mem);
+    cpu.flags.C = true;
+    cpu.flags.I = true;
+    cpu.flags.D = true;
+    mem.memory[0x0] = OPCODES.PHP_IMPLIED;
+    mem.memory[0x1] = OPCODES.CLC_IMPLIED;
+    mem.memory[0x2] = OPCODES.CLD_IMPLIED;
+    mem.memory[0x3] = OPCODES.CLI_IMPLIED;
+    mem.memory[0x4] = OPCODES.PLP_IMPLIED;
+
+    cpu.cycles = 13;
+    cpu.execute(mem);
+    expect(cpu.flags.C).toBe(true);
+    expect(cpu.flags.I).toBe(true);
+    expect(cpu.flags.D).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+});
+describe('System Function tests', () => {
+  test('No op', () => {
+    cpu.reset(mem);
+    mem.memory[0x0] = OPCODES.NOP_IMPLIED;
+    cpu.cycles = 2;
+    cpu.execute(mem);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('BRK test', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x8080;
+    cpu.flags.C = true;
+    cpu.flags.N = true;
+    mem.memory[0x8080] = OPCODES.BRK_IMPLIED;
+    mem.memory[0xfffe] = 0x05;
+    mem.memory[0xffff] = 0x40; // 4005
+    cpu.cycles = 7;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x4005);
+    expect(cpu.flags.B).toBe(true);
+    expect(mem.memory[0xff]).toBe(0x80);
+    expect(mem.memory[0xfe]).toBe(0x81); //PC 8001
+    expect(mem.memory[0xfd]).toBe(0x81); //flags
+    expect(cpu.cycles).toBe(0);
+  });
+  test('BRK + RTI test', () => {
+    cpu.reset(mem);
+    cpu.PC = 0x8080;
+    cpu.flags.C = true;
+    cpu.flags.N = true;
+    mem.memory[0x8080] = OPCODES.BRK_IMPLIED;
+    mem.memory[0xfffe] = 0x05;
+    mem.memory[0xffff] = 0x40; // 4005
+    mem.memory[0x4005] = OPCODES.RTI_IMPLIED;
+    cpu.cycles = 13;
+    cpu.execute(mem);
+    expect(cpu.PC).toEqual(0x8081);
+    // expect(cpu.flags.B).toBe(true);
+    expect(cpu.SP).toBe(0xff);
+    expect(cpu.cycles).toBe(0);
   });
 });
