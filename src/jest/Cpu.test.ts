@@ -3129,3 +3129,31 @@ describe('System Function tests', () => {
     expect(cpu.cycles).toBe(0);
   });
 });
+describe('BIT tests', () => {
+  test('BIT_ZEROPAGE', () => {
+    cpu.reset(mem);
+    cpu.registers.A = 0x4;
+    mem.memory[0x0] = OPCODES.BIT_ZEROPAGE;
+    mem.memory[0x1] = 0x32;
+    mem.memory[0x32] = 0x81;
+    cpu.cycles = 3;
+    cpu.execute(mem);
+    expect(cpu.flags.N).toBe(true);
+    expect(cpu.flags.Z).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+  test('BIT_ABSOLUTE', () => {
+    cpu.reset(mem);
+    cpu.registers.A = 0x80;
+    mem.memory[0x0] = OPCODES.BIT_ABSOLUTE;
+    mem.memory[0x1] = 0x32;
+    mem.memory[0x2] = 0x44; //0x4432
+    mem.memory[0x4432] = 0xfa;
+    cpu.cycles = 4;
+    cpu.execute(mem);
+    expect(cpu.flags.N).toBe(true);
+    expect(cpu.flags.Z).toBe(false);
+    expect(cpu.flags.V).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+});

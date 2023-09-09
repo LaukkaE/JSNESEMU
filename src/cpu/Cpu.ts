@@ -188,6 +188,9 @@ enum OPCODES { //num of Cycles
   BRK_IMPLIED = 0x00, //7
   NOP_IMPLIED = 0xea, //2
   RTI_IMPLIED = 0x40, //6
+  //BIT - Bit Test
+  BIT_ZEROPAGE = 0x24, //3
+  BIT_ABSOLUTE = 0x2c, //4
 }
 
 class CPU {
@@ -1626,6 +1629,22 @@ class CPU {
           this.PC = storedPC;
           this.setFlagsFromByte(storedFlags);
           this.cycles -= 2;
+          break;
+        }
+
+        //Bit Tests
+        case OPCODES.BIT_ZEROPAGE: {
+          let data = this.returnZeroPageAdressingData(memory);
+          this.flags.Z = (this.registers.A & data) === 0;
+          this.flags.N = (data & 0x80) > 0;
+          this.flags.V = (data & 0x40) > 0;
+          break;
+        }
+        case OPCODES.BIT_ABSOLUTE: {
+          let data = this.returnAbsoluteAddressingData(memory);
+          this.flags.Z = (this.registers.A & data) === 0;
+          this.flags.N = (data & 0x80) > 0;
+          this.flags.V = (data & 0x40) > 0;
           break;
         }
         default:
