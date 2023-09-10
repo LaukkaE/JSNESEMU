@@ -1102,7 +1102,7 @@ describe('CPU Transfer tests', () => {
     cpu.execute(mem);
 
     expect(cpu.cycles).toBe(0);
-    expect(cpu.registers.X).toEqual(0xff);
+    expect(cpu.registers.X).toEqual(0x1ff);
   });
   test('TXS_IMPLIED', () => {
     cpu.reset(mem);
@@ -3029,7 +3029,7 @@ describe('CPU STACK tests', () => {
     cpu.cycles = 3;
     cpu.execute(mem);
     expect(mem.memory[0xff]).toEqual(0x8);
-    expect(cpu.SP).toEqual(0xfe);
+    expect(cpu.SP).toEqual(0x1fe);
     expect(cpu.cycles).toBe(0);
   });
   test('PHP Test', () => {
@@ -3040,7 +3040,7 @@ describe('CPU STACK tests', () => {
     cpu.cycles = 3;
     cpu.execute(mem);
     expect(mem.memory[0xff]).toEqual(0x81);
-    expect(cpu.SP).toEqual(0xfe);
+    expect(cpu.SP).toEqual(0x1fe);
     expect(cpu.cycles).toBe(0);
   });
   test('PHA (+ TXA) + PLA Test', () => {
@@ -3052,9 +3052,9 @@ describe('CPU STACK tests', () => {
     mem.memory[0x2] = OPCODES.PLA_IMPLIED;
     cpu.cycles = 9;
     cpu.execute(mem);
-    expect(mem.memory[0xff]).toEqual(0x8);
+    expect(mem.memory[0x1ff]).toEqual(0x8);
     expect(cpu.registers.A).toEqual(0x8);
-    expect(cpu.SP).toEqual(0xff);
+    expect(cpu.SP).toEqual(0x1ff);
     expect(cpu.cycles).toEqual(0);
   });
   test('PLP TEST', () => {
@@ -3107,9 +3107,9 @@ describe('System Function tests', () => {
     cpu.execute(mem);
     expect(cpu.PC).toEqual(0x4005);
     expect(cpu.flags.B).toBe(true);
-    expect(mem.memory[0xff]).toBe(0x80);
-    expect(mem.memory[0xfe]).toBe(0x81); //PC 8001
-    expect(mem.memory[0xfd]).toBe(0x81); //flags
+    expect(mem.memory[0x1ff]).toBe(0x80);
+    expect(mem.memory[0x1fe]).toBe(0x81); //PC 8001
+    expect(mem.memory[0x1fd]).toBe(0x81); //flags
     expect(cpu.cycles).toBe(0);
   });
   test('BRK + RTI test', () => {
@@ -3125,7 +3125,7 @@ describe('System Function tests', () => {
     cpu.execute(mem);
     expect(cpu.PC).toEqual(0x8081);
     // expect(cpu.flags.B).toBe(true);
-    expect(cpu.SP).toBe(0xff);
+    expect(cpu.SP).toBe(0x1ff);
     expect(cpu.cycles).toBe(0);
   });
 });

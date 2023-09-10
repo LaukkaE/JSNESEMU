@@ -11,6 +11,22 @@ class Memory {
   writeByte(address: number, value: number) {
     this.memory[address] = value;
   }
+  // loadProgram(filepath: string) {
+  //   const romContent = fs
+  //     .readFileSync(filepath, 'hex')
+  //     .split(/(.{2})/)
+  //     .filter((e) => e);
+  //   for (let i = 0x10; i < 0x4010; i++) {
+  //     this.memory[0x8000 - 0x10 + i] = parseInt(romContent[i], 16);
+  //     this.memory[0xc000 - 0x10 + i] = parseInt(romContent[i], 16);
+  //   }
+  // }
+  loadProgram(rom: any) {
+    for (let i = 0x10; i < 0x4010; i++) {
+      this.memory[0x8000 - 0x10 + i] = rom[i];
+      this.memory[0xc000 - 0x10 + i] = rom[i];
+    }
+  }
 }
 
 enum OPCODES { //num of Cycles
@@ -163,7 +179,7 @@ enum OPCODES { //num of Cycles
   CLI_IMPLIED = 0x58, //2
   CLV_IMPLIED = 0xb8, //2
   SEC_IMPLIED = 0x38, //2
-  // SED_IMPLIED = 0xf8, //2 DECIMAL MODE ENABLE - Decimal mode is not available in NES
+  SED_IMPLIED = 0xf8, //2 DECIMAL MODE ENABLE - Decimal mode is not available in NES
   SEI_IMPLIED = 0x78, //2
   //Branch Instructions
   BCC_RELATIVE = 0x90, //2 (+1 or +2)
@@ -195,6 +211,7 @@ enum OPCODES { //num of Cycles
 
 class CPU {
   cycles = 0; //Ticks to be computed
+  elapsedCycles = 0; //debug tracking
   PC = 0x0000; //Program counter
   SP = 0x00; //Stack pointer
   registers = {
@@ -229,9 +246,9 @@ class CPU {
 
   //todo: oikeessa resetissä muistia ei purgeta
   reset(memory: Memory) {
-    memory.resetMemory();
+    // memory.resetMemory();
     this.PC = memory.memory[0xfffc] | (memory.memory[0xfffd] << 8); //  resetissä lue fffc ja fffd combinee ja laita pc. eli 0x10 + 0x42 : pc = 0x4210, tyhjällä muistilla aina 0x0
-    this.SP = 0xff;
+    this.SP = 0x1fd;
     this.cycles = 0;
     this.clearFlags();
     this.clearRegisters();
@@ -244,6 +261,7 @@ class CPU {
     constructedByte |= +this.flags.I << 2;
     constructedByte |= +this.flags.D << 3;
     constructedByte |= +this.flags.B << 4;
+    constructedByte |= +true << 5; //empty flag space always high
     constructedByte |= +this.flags.V << 6;
     constructedByte |= +this.flags.N << 7;
     return constructedByte;
@@ -365,7 +383,7 @@ class CPU {
     return offset;
   }
   pushVectorToStack(memory: Memory, vector: number) {
-    memory.writeVector(vector, this.SP); //TODO : Koska pc on jo incrementattu, tää saattaa olla pc - 2
+    memory.writeVector(vector, this.SP);
     this.SP -= 2; //TODO Stackin tarkistus
   }
   pushByteToStack(memory: Memory, byte: number) {
@@ -373,12 +391,13 @@ class CPU {
     this.SP--;
   }
   pullByteFromStack(memory: Memory) {
-    let byte = this.readByte(memory, this.SP + 1);
+    let byte = this.readByte(memory, this.SP + 1); //+1
     this.SP++;
     return byte;
   }
   pullVectorFromStack(memory: Memory) {
-    let vector = this.readVector(memory, this.SP + 1);
+    let vector = this.readVector(memory, this.SP + 1); //+1
+    console.log('pullvector', this.SP, vector, this.elapsedCycles);
     this.SP += 2;
     return vector;
   }
@@ -437,8 +456,16 @@ class CPU {
     this.pageCrossBoundaryCheck(vectorY, vector);
     return this.readByte(memory, vectorY);
   }
+
+  tick(memory: Memory) {
+    this.cycles++;
+    if (this.cycles >= 0) {
+      this.execute(memory);
+    }
+  }
+
   execute(memory: Memory) {
-    while (this.cycles > 0) {
+    while (this.cycles >= 0) {
       let opcode = this.getByte(memory); //1 cycle
       switch (opcode) {
         //ADC INSTRUCTIONS
@@ -1431,13 +1458,13 @@ class CPU {
         }
         case OPCODES.TXS_IMPLIED: {
           //TODO : TXS JA TSX SAATTAA OLLA VITUILLAAN
-          this.SP = this.registers.X;
+          this.SP = this.registers.X + 0x100; //pysytään stäckin sisäl
           this.cycles--;
           break;
         }
         case OPCODES.TSX_IMPLIED: {
           //TODO : TXS JA TSX SAATTAA OLLA VITUILLAAN
-          this.registers.X = this.SP;
+          this.registers.X = this.SP - 0x100;
           this.setZeroAndNegativeFlags(this.registers.X);
           this.cycles--;
           break;
@@ -1456,8 +1483,8 @@ class CPU {
           break;
         }
         case OPCODES.PLA_IMPLIED: {
-          this.registers.A = this.readByte(memory, this.SP + 1);
-          this.SP++;
+          this.registers.A = this.pullByteFromStack(memory);
+          this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles -= 2;
           break;
         }
@@ -1496,6 +1523,11 @@ class CPU {
         }
         case OPCODES.SEI_IMPLIED: {
           this.flags.I = true;
+          this.cycles--;
+          break;
+        }
+        case OPCODES.SED_IMPLIED: {
+          this.flags.D = true;
           this.cycles--;
           break;
         }
@@ -1578,7 +1610,7 @@ class CPU {
         case OPCODES.JSR_ABSOLUTE: {
           //6 cycles
           let jumpAddress = this.getVector(memory);
-          this.pushVectorToStack(memory, this.PC - 1); //TODO : Koska pc on jo incrementattu, tää saattaa olla pc - 2
+          this.pushVectorToStack(memory, this.PC + 2); //TODO : Koska pc on jo incrementattu, tää saattaa olla pc + 1
           this.PC = jumpAddress;
           this.cycles -= 3;
           break;
@@ -1648,7 +1680,7 @@ class CPU {
           break;
         }
         default:
-          throw `unimplemented opcode ${opcode} at PC ${this.PC - 1}`;
+          console.log(`unimplemented opcode ${opcode} at PC ${this.PC - 1}`);
       }
     }
   }
