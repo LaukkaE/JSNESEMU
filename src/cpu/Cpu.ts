@@ -281,6 +281,7 @@ class CPU {
     let byte = memory.memory[this.PC];
     this.PC++;
     this.cycles--;
+    this.elapsedCycles++;
     return byte;
   }
   getVector(memory: Memory) {
@@ -290,13 +291,16 @@ class CPU {
     let secondByte = memory.memory[this.PC];
     this.PC++;
     this.cycles -= 2;
+    this.elapsedCycles += 2;
     return firstByte | (secondByte << 8);
   }
   readVector(memory: Memory, address: number) {
     //read 16 bit vector from mem, takes 2 cycles
-    let firstByte = memory.memory[address];
-    let secondByte = memory.memory[address + 1];
+    let firstByte = memory.memory[address]; //jos kutsutaan zero pagelle 0xff niin wrap zeropagen alkuun
+    let nextAddress = address !== 0xff ? address + 1 : (address + 1) & 0xff;
+    let secondByte = memory.memory[nextAddress];
     this.cycles -= 2;
+    this.elapsedCycles += 2;
     return firstByte | (secondByte << 8);
   }
 
@@ -304,6 +308,7 @@ class CPU {
     // read byte from mem, takes 1 cycle,
     let byte = memory.memory[address];
     this.cycles--;
+    this.elapsedCycles++;
     return byte;
   }
 
@@ -367,13 +372,15 @@ class CPU {
   //Subtract with Carry Register & Flags
   setSBCRegisterAndFlags(value: number) {
     let ABefore = this.registers.A;
-    let subtractedValue = this.registers.A + (value ^ 0xff) + +this.flags.C; //A = A - M - (1 - C) => A + (-M) + C
+    let flippedValue = value ^ 0xff;
+    let subtractedValue = this.registers.A + flippedValue + +this.flags.C; //A = A - M - (1 - C) => A + (-M) + C
     this.registers.A = subtractedValue & 0xff; //Varmaan redundant
     this.flags.Z = this.registers.A === 0;
     this.flags.N = (this.registers.A & 0x80) > 0;
     this.flags.C = (subtractedValue & 0xff00) > 0; //CLEAR if overflow
     this.flags.V =
-      ((ABefore ^ subtractedValue) & (value ^ subtractedValue) & 0x80) > 0; //Same as ADC (?)
+      ((ABefore ^ subtractedValue) & (subtractedValue ^ flippedValue) & 0x80) >
+      0; //Same as ADC (?)
   }
   getBranchOffset(memory: Memory) {
     let offset = this.getByte(memory);
@@ -397,7 +404,6 @@ class CPU {
   }
   pullVectorFromStack(memory: Memory) {
     let vector = this.readVector(memory, this.SP + 1); //+1
-    console.log('pullvector', this.SP, vector, this.elapsedCycles);
     this.SP += 2;
     return vector;
   }
@@ -405,7 +411,7 @@ class CPU {
   setCompareFlags(register: number, memoryByte: number) {
     this.flags.C = register >= memoryByte;
     this.flags.Z = register === memoryByte;
-    this.flags.N = (register & 0x80) > 0; //TODO: sanotaan et "Set if bit 7 of the result is set" mut comparet ei muuta registeriä
+    this.flags.N = ((register - memoryByte) & 0x80) > 0;
   }
   zeroPageWrappingCheck(zeroPageAddress: number, Xregister: number) {
     //Zero page ends at 0xff, wrap if overflow instead of exiting zero page
@@ -415,6 +421,7 @@ class CPU {
     //6502 Spends an extra cycle if memory "page" switches high byte of memory address is the "page"
     if ((secondAddress & 0xff00) !== (address & 0xff00)) {
       this.cycles--;
+      this.elapsedCycles++;
     }
   }
 
@@ -432,6 +439,7 @@ class CPU {
     let address = this.getVector(memory);
     if (offset > 0) {
       let addressWithOffset = address + offset;
+      addressWithOffset &= 0xffff; //WRAP muistin alkuun jos mennään muistin ulkopuolelle
       this.pageCrossBoundaryCheck(addressWithOffset, address);
       return this.readByte(memory, addressWithOffset);
     } else {
@@ -453,6 +461,8 @@ class CPU {
     let zeroPageAddress = this.getByte(memory);
     let vector = this.readVector(memory, zeroPageAddress);
     let vectorY = vector + this.registers.Y;
+    console.log(vectorY.toString(16));
+    vectorY &= 0xffff; //WRAP muistin alkuun jos mennään muistin ulkopuolelle
     this.pageCrossBoundaryCheck(vectorY, vector);
     return this.readByte(memory, vectorY);
   }
@@ -462,6 +472,12 @@ class CPU {
     if (this.cycles >= 0) {
       this.execute(memory);
     }
+  }
+  runOneInstruction(memory: Memory) {
+    do {
+      this.cycles++;
+    } while (this.cycles < 0);
+    this.execute(memory);
   }
 
   execute(memory: Memory) {
@@ -486,6 +502,7 @@ class CPU {
           );
           this.setADCRegisterAndFlags(value);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.ADC_ABSOLUTE: {
@@ -514,6 +531,7 @@ class CPU {
           let value = this.returnIndexedIndirectAddressingData(memory);
           this.setADCRegisterAndFlags(value);
           this.cycles -= 1;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.ADC_INDIRECT_INDEXED_Y: {
@@ -544,6 +562,7 @@ class CPU {
           );
           this.setSBCRegisterAndFlags(value);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.SBC_ABSOLUTE: {
@@ -572,6 +591,7 @@ class CPU {
           let value = this.returnIndexedIndirectAddressingData(memory);
           this.setSBCRegisterAndFlags(value);
           this.cycles -= 1;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.SBC_INDIRECT_INDEXED_Y: {
@@ -605,6 +625,7 @@ class CPU {
           this.registers.A &= value;
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.AND_ABSOLUTE: {
@@ -637,6 +658,7 @@ class CPU {
           this.registers.A &= value;
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles -= 1;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.AND_INDIRECT_INDEXED_Y: {
@@ -650,6 +672,7 @@ class CPU {
         case OPCODES.ASL_ACCUMULATOR: {
           this.registers.A = this.setASLFlagsAndReturnValue(this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.ASL_ZEROPAGE: {
@@ -658,6 +681,7 @@ class CPU {
           value = this.setASLFlagsAndReturnValue(value);
           memory.writeByte(zeroPageAddress, value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.ASL_ZEROPAGE_X: {
@@ -670,6 +694,7 @@ class CPU {
           value = this.setASLFlagsAndReturnValue(value);
           memory.writeByte(zeroPageAddressX, value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         case OPCODES.ASL_ABSOLUTE: {
@@ -678,6 +703,7 @@ class CPU {
           value = this.setASLFlagsAndReturnValue(value);
           memory.writeByte(absoluteAddress, value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.ASL_ABSOLUTE_X: {
@@ -688,12 +714,15 @@ class CPU {
           value = this.setASLFlagsAndReturnValue(value);
           memory.writeByte(addressX, value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
+
           break;
         }
         //LSR INSTRUCTIONS
         case OPCODES.LSR_ACCUMULATOR: {
           this.registers.A = this.setLSRFlagsAndReturnValue(this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.LSR_ZEROPAGE: {
@@ -702,6 +731,7 @@ class CPU {
           value = this.setLSRFlagsAndReturnValue(value);
           memory.writeByte(zeroPageAddress, value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.LSR_ZEROPAGE_X: {
@@ -714,6 +744,7 @@ class CPU {
           value = this.setLSRFlagsAndReturnValue(value);
           memory.writeByte(zeroPageAddressX, value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         case OPCODES.LSR_ABSOLUTE: {
@@ -722,6 +753,7 @@ class CPU {
           value = this.setLSRFlagsAndReturnValue(value);
           memory.writeByte(absoluteAddress, value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.LSR_ABSOLUTE_X: {
@@ -732,12 +764,14 @@ class CPU {
           value = this.setLSRFlagsAndReturnValue(value);
           memory.writeByte(addressX, value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         //ROL INSTRUCTIONS
         case OPCODES.ROL_ACCUMULATOR: {
           this.registers.A = this.setROLFlagsAndReturnValue(this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.ROL_ZEROPAGE: {
@@ -746,6 +780,7 @@ class CPU {
           value = this.setROLFlagsAndReturnValue(value);
           memory.writeByte(zeroPageAddress, value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.ROL_ZEROPAGE_X: {
@@ -758,6 +793,7 @@ class CPU {
           value = this.setROLFlagsAndReturnValue(value);
           memory.writeByte(zeroPageAddressX, value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         case OPCODES.ROL_ABSOLUTE: {
@@ -766,6 +802,7 @@ class CPU {
           value = this.setROLFlagsAndReturnValue(value);
           memory.writeByte(absoluteAddress, value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.ROL_ABSOLUTE_X: {
@@ -776,12 +813,14 @@ class CPU {
           value = this.setROLFlagsAndReturnValue(value);
           memory.writeByte(addressX, value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         //ROR INSTRUCTIONS
         case OPCODES.ROR_ACCUMULATOR: {
           this.registers.A = this.setRORFlagsAndReturnValue(this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.ROR_ZEROPAGE: {
@@ -790,6 +829,7 @@ class CPU {
           value = this.setRORFlagsAndReturnValue(value);
           memory.writeByte(zeroPageAddress, value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.ROR_ZEROPAGE_X: {
@@ -802,6 +842,7 @@ class CPU {
           value = this.setRORFlagsAndReturnValue(value);
           memory.writeByte(zeroPageAddressX, value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         case OPCODES.ROR_ABSOLUTE: {
@@ -810,6 +851,7 @@ class CPU {
           value = this.setRORFlagsAndReturnValue(value);
           memory.writeByte(absoluteAddress, value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.ROR_ABSOLUTE_X: {
@@ -820,6 +862,7 @@ class CPU {
           value = this.setRORFlagsAndReturnValue(value);
           memory.writeByte(addressX, value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
 
@@ -844,6 +887,7 @@ class CPU {
           this.registers.A ^= value;
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.EOR_ABSOLUTE: {
@@ -876,6 +920,7 @@ class CPU {
           this.registers.A ^= value;
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles -= 1;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.EOR_INDIRECT_INDEXED_Y: {
@@ -907,6 +952,7 @@ class CPU {
           this.registers.A |= value;
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.ORA_ABSOLUTE: {
@@ -939,6 +985,7 @@ class CPU {
           this.registers.A |= value;
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles -= 1;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.ORA_INDIRECT_INDEXED_Y: {
@@ -954,6 +1001,7 @@ class CPU {
           this.registers.X++;
           this.registers.X &= 0xff; //wrap if overflow
           this.cycles--;
+          this.elapsedCycles++;
           this.setZeroAndNegativeFlags(this.registers.X);
           break;
         }
@@ -961,6 +1009,7 @@ class CPU {
           this.registers.Y++;
           this.registers.Y &= 0xff; //wrap if overflow
           this.cycles--;
+          this.elapsedCycles++;
           this.setZeroAndNegativeFlags(this.registers.Y);
           break;
           break;
@@ -969,6 +1018,7 @@ class CPU {
           this.registers.X--;
           this.registers.X &= 0xff; //wrap if underflow
           this.cycles--;
+          this.elapsedCycles++;
           this.setZeroAndNegativeFlags(this.registers.X);
           break;
         }
@@ -976,6 +1026,7 @@ class CPU {
           this.registers.Y--;
           this.registers.Y &= 0xff; //wrap if underflow
           this.cycles--;
+          this.elapsedCycles++;
           this.setZeroAndNegativeFlags(this.registers.Y);
           break;
         }
@@ -987,6 +1038,7 @@ class CPU {
           memory.writeByte(address, value);
           this.setZeroAndNegativeFlags(value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.INC_ABSOLUTE_X: {
@@ -999,6 +1051,7 @@ class CPU {
           memory.writeByte(addressX, value);
           this.setZeroAndNegativeFlags(value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         case OPCODES.INC_ZEROPAGE: {
@@ -1009,6 +1062,7 @@ class CPU {
           memory.writeByte(zeroPageAddress, value);
           this.setZeroAndNegativeFlags(value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.INC_ZEROPAGE_X: {
@@ -1023,6 +1077,7 @@ class CPU {
           memory.writeByte(zeroPageAddressX, value);
           this.setZeroAndNegativeFlags(value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         case OPCODES.DEC_ABSOLUTE: {
@@ -1033,6 +1088,7 @@ class CPU {
           memory.writeByte(address, value);
           this.setZeroAndNegativeFlags(value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.DEC_ABSOLUTE_X: {
@@ -1045,6 +1101,7 @@ class CPU {
           memory.writeByte(addressX, value);
           this.setZeroAndNegativeFlags(value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         case OPCODES.DEC_ZEROPAGE: {
@@ -1055,6 +1112,7 @@ class CPU {
           memory.writeByte(zeroPageAddress, value);
           this.setZeroAndNegativeFlags(value);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.DEC_ZEROPAGE_X: {
@@ -1069,6 +1127,7 @@ class CPU {
           memory.writeByte(zeroPageAddressX, value);
           this.setZeroAndNegativeFlags(value);
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
 
@@ -1090,6 +1149,7 @@ class CPU {
           let data = this.returnZeroPageAdressingData(memory, this.registers.X);
           this.setCompareFlags(this.registers.A, data);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.CMP_ABSOLUTE: {
@@ -1121,6 +1181,7 @@ class CPU {
           let data = this.returnIndexedIndirectAddressingData(memory);
           this.setCompareFlags(this.registers.A, data);
           this.cycles -= 1;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.CMP_INDIRECT_INDEXED_Y: {
@@ -1189,6 +1250,7 @@ class CPU {
             this.registers.X
           );
           this.cycles--;
+          this.elapsedCycles++;
           this.setZeroAndNegativeFlags(this.registers.A);
           break;
         }
@@ -1221,6 +1283,7 @@ class CPU {
           this.registers.A = this.returnIndexedIndirectAddressingData(memory);
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles -= 1;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.LDA_INDIRECT_INDEXED_Y: {
@@ -1251,6 +1314,7 @@ class CPU {
             this.registers.Y
           );
           this.cycles--;
+          this.elapsedCycles++;
           this.setZeroAndNegativeFlags(this.registers.X);
           break;
         }
@@ -1291,6 +1355,7 @@ class CPU {
             this.registers.X
           );
           this.cycles--;
+          this.elapsedCycles++;
           this.setZeroAndNegativeFlags(this.registers.Y);
           break;
         }
@@ -1316,6 +1381,7 @@ class CPU {
           let zeroPageAddress = this.getByte(memory);
           memory.writeByte(zeroPageAddress, this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.STA_ZEROPAGE_X: {
@@ -1327,6 +1393,7 @@ class CPU {
           );
           memory.writeByte(zeroPageAddressX, this.registers.A);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.STA_ABSOLUTE: {
@@ -1334,6 +1401,7 @@ class CPU {
           let address = this.getVector(memory);
           memory.writeByte(address, this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.STA_ABSOLUTE_X: {
@@ -1343,6 +1411,7 @@ class CPU {
           // this.pageCrossBoundaryCheck(addressX, address);
           memory.writeByte(addressX, this.registers.A);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.STA_ABSOLUTE_Y: {
@@ -1352,6 +1421,7 @@ class CPU {
           // this.pageCrossBoundaryCheck(addressX, address);
           memory.writeByte(addressY, this.registers.A);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.STA_INDEXED_INDIRECT_X: {
@@ -1364,6 +1434,7 @@ class CPU {
           let vector = this.readVector(memory, zeroPageAddressX);
           memory.writeByte(vector, this.registers.A);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.STA_INDIRECT_INDEXED_Y: {
@@ -1374,6 +1445,7 @@ class CPU {
           // this.pageCrossBoundaryCheck(vectorY, vector);
           memory.writeByte(vectorY, this.registers.A);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
 
@@ -1383,6 +1455,7 @@ class CPU {
           let zeroPageAddress = this.getByte(memory);
           memory.writeByte(zeroPageAddress, this.registers.X);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.STX_ZEROPAGE_Y: {
@@ -1394,6 +1467,7 @@ class CPU {
           );
           memory.writeByte(zeroPageAddressY, this.registers.X);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.STX_ABSOLUTE: {
@@ -1401,6 +1475,7 @@ class CPU {
           let address = this.getVector(memory);
           memory.writeByte(address, this.registers.X);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
 
@@ -1410,6 +1485,7 @@ class CPU {
           let zeroPageAddress = this.getByte(memory);
           memory.writeByte(zeroPageAddress, this.registers.Y);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.STY_ZEROPAGE_X: {
@@ -1421,6 +1497,7 @@ class CPU {
           );
           memory.writeByte(zeroPageAddressX, this.registers.Y);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.STY_ABSOLUTE: {
@@ -1428,6 +1505,7 @@ class CPU {
           let address = this.getVector(memory);
           memory.writeByte(address, this.registers.Y);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
 
@@ -1436,30 +1514,35 @@ class CPU {
           this.registers.X = this.registers.A;
           this.setZeroAndNegativeFlags(this.registers.X);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.TAY_IMPLIED: {
           this.registers.Y = this.registers.A;
           this.setZeroAndNegativeFlags(this.registers.Y);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.TXA_IMPLIED: {
           this.registers.A = this.registers.X;
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.TYA_IMPLIED: {
           this.registers.A = this.registers.Y;
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.TXS_IMPLIED: {
           //TODO : TXS JA TSX SAATTAA OLLA VITUILLAAN
           this.SP = this.registers.X + 0x100; //pysytään stäckin sisäl
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.TSX_IMPLIED: {
@@ -1467,6 +1550,7 @@ class CPU {
           this.registers.X = this.SP - 0x100;
           this.setZeroAndNegativeFlags(this.registers.X);
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
 
@@ -1474,24 +1558,28 @@ class CPU {
         case OPCODES.PHA_IMPLIED: {
           this.pushByteToStack(memory, this.registers.A);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.PHP_IMPLIED: {
           let constructedByte = this.constructByteFromFlags();
           this.pushByteToStack(memory, constructedByte);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.PLA_IMPLIED: {
           this.registers.A = this.pullByteFromStack(memory);
           this.setZeroAndNegativeFlags(this.registers.A);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
         case OPCODES.PLP_IMPLIED: {
           let processorStatus = this.pullByteFromStack(memory);
           this.setFlagsFromByte(processorStatus);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
 
@@ -1499,36 +1587,43 @@ class CPU {
         case OPCODES.CLC_IMPLIED: {
           this.flags.C = false;
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.CLD_IMPLIED: {
           this.flags.D = false;
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.CLI_IMPLIED: {
           this.flags.I = false;
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.CLV_IMPLIED: {
           this.flags.V = false;
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.SEC_IMPLIED: {
           this.flags.C = true;
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.SEI_IMPLIED: {
           this.flags.I = true;
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.SED_IMPLIED: {
           this.flags.D = true;
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
 
@@ -1539,6 +1634,7 @@ class CPU {
             this.pageCrossBoundaryCheck(this.PC, this.PC + branchOffset);
             this.PC += branchOffset;
             this.cycles--;
+            this.elapsedCycles++;
           }
           break;
         }
@@ -1548,6 +1644,7 @@ class CPU {
             this.pageCrossBoundaryCheck(this.PC, this.PC + branchOffset);
             this.PC += branchOffset;
             this.cycles--;
+            this.elapsedCycles++;
           }
           break;
         }
@@ -1557,6 +1654,7 @@ class CPU {
             this.pageCrossBoundaryCheck(this.PC, this.PC + branchOffset);
             this.PC += branchOffset;
             this.cycles--;
+            this.elapsedCycles++;
           }
           break;
         }
@@ -1566,6 +1664,7 @@ class CPU {
             this.pageCrossBoundaryCheck(this.PC, this.PC + branchOffset);
             this.PC += branchOffset;
             this.cycles--;
+            this.elapsedCycles++;
           }
           break;
         }
@@ -1575,6 +1674,7 @@ class CPU {
             this.pageCrossBoundaryCheck(this.PC, this.PC + branchOffset);
             this.PC += branchOffset;
             this.cycles--;
+            this.elapsedCycles++;
           }
           break;
         }
@@ -1584,6 +1684,7 @@ class CPU {
             this.pageCrossBoundaryCheck(this.PC, this.PC + branchOffset);
             this.PC += branchOffset;
             this.cycles--;
+            this.elapsedCycles++;
           }
           break;
         }
@@ -1593,6 +1694,7 @@ class CPU {
             this.pageCrossBoundaryCheck(this.PC, this.PC + branchOffset);
             this.PC += branchOffset;
             this.cycles--;
+            this.elapsedCycles++;
           }
           break;
         }
@@ -1602,6 +1704,7 @@ class CPU {
             this.pageCrossBoundaryCheck(this.PC, this.PC + branchOffset);
             this.PC += branchOffset;
             this.cycles--;
+            this.elapsedCycles++;
           }
           break;
         }
@@ -1610,9 +1713,10 @@ class CPU {
         case OPCODES.JSR_ABSOLUTE: {
           //6 cycles
           let jumpAddress = this.getVector(memory);
-          this.pushVectorToStack(memory, this.PC + 2); //TODO : Koska pc on jo incrementattu, tää saattaa olla pc + 1
+          this.pushVectorToStack(memory, this.PC - 1); //joko +2 tai -2 ehkä
           this.PC = jumpAddress;
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
         case OPCODES.JMP_ABSOLUTE: {
@@ -1623,25 +1727,36 @@ class CPU {
         }
         case OPCODES.JMP_INDIRECT: {
           //5 cycles
-          let firstAddress = this.getByte(memory);
-          let secondAddress = this.getByte(memory); //Nää incrementtaa PC:tä mut ei pitäs olla väliä
-          let firstByte = this.readByte(memory, firstAddress);
-          let secondByte = this.readByte(memory, secondAddress);
+          let firstAddress = this.readByte(memory, this.PC);
+          let secondAddress = this.readByte(memory, this.PC + 1);
+          // let jumpAddress = this.readVector(
+          //   memory,
+          //   firstAddress | (secondAddress << 8)
+          // );
+          let combined = firstAddress | (secondAddress << 8);
+          let firstByte = memory.memory[combined]; //if first read is xxff, then second is xx00
+          let secondByte =
+            memory.memory[
+              firstAddress != 0xff ? combined + 1 : combined - 0xff
+            ];
+          this.cycles -= 2;
+          this.elapsedCycles += 2;
           this.PC = firstByte | (secondByte << 8);
           break;
         }
         case OPCODES.RTS_IMPLIED: {
           //6 cycles
           let storedPC = this.pullVectorFromStack(memory);
-          // let storedPC = this.readVector(memory, this.SP + 1); //TODO : STACK tarkistus
-          this.PC = storedPC - 2; //TODO TÄMÄKIN
+          this.PC = storedPC + 1; //TODO TÄMÄKIN
           this.cycles -= 3;
+          this.elapsedCycles += 3;
           break;
         }
 
         //System Functions
         case OPCODES.NOP_IMPLIED: {
           this.cycles--;
+          this.elapsedCycles++;
           break;
         }
         case OPCODES.BRK_IMPLIED: {
@@ -1652,6 +1767,7 @@ class CPU {
           this.pushByteToStack(memory, flagsByte);
           this.flags.B = true;
           this.cycles -= 4;
+          this.elapsedCycles += 4;
           break;
         }
         case OPCODES.RTI_IMPLIED: {
@@ -1661,6 +1777,7 @@ class CPU {
           this.PC = storedPC;
           this.setFlagsFromByte(storedFlags);
           this.cycles -= 2;
+          this.elapsedCycles += 2;
           break;
         }
 
@@ -1680,7 +1797,11 @@ class CPU {
           break;
         }
         default:
-          console.log(`unimplemented opcode ${opcode} at PC ${this.PC - 1}`);
+          console.log(
+            `unimplemented opcode ${opcode} at PC ${this.PC - 1} at tick ${
+              this.elapsedCycles
+            }`
+          );
       }
     }
   }

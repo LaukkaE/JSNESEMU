@@ -11,7 +11,7 @@ const DebugStack = ({ SP, memory }: Props) => {
         <li key={i}>
           <p style={{ color: `${i === 0 ? 'blue' : 'white'}` }}>
             {' '}
-            {`${(SP + i).toString(16)}: ${memory.memory[SP + i]}`}
+            {`${(SP + i).toString(16)}: ${memory.memory[SP + i].toString(16)}`}
           </p>
         </li>
       );

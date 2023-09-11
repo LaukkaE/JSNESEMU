@@ -13,11 +13,13 @@ const fileTypes = ['nes'];
 const DebugPage = ({ cpu, memory }: Props) => {
   const [_, setState] = useState(false);
   const [run, setRun] = useState(false);
+  const [runUntil, setRunUntil] = useState(0);
+  const [hexToRead, setHexToRead] = useState('');
   const [rom, setRom] = useState<Uint8Array | null>(null);
   const handleKeyDown = (e: any) => {
+    if (!rom) return;
     if (e.key === ' ') {
-      cpu.cycles = 0;
-      cpu.tick(memory);
+      cpu.runOneInstruction(memory);
     }
     if (e.key === 'r' || e.key === 'R') {
       setRun((prev) => !prev);
@@ -34,28 +36,66 @@ const DebugPage = ({ cpu, memory }: Props) => {
     reader.onload = () => {
       let arrayBuffer = reader.result;
       var bytes = new Uint8Array(arrayBuffer as ArrayBuffer);
-      // console.log(bytes);
       memory.loadProgram(bytes);
       cpu.reset(memory);
       cpu.PC = 0xc000;
+      cpu.elapsedCycles = 7;
       setRom(bytes);
       setState((prev) => !prev);
     };
   };
+
+  const handleChange = (e: any) => {
+    let num = parseFloat(e.target.value);
+    if (!isNaN(num)) {
+      setRunUntil(num);
+    }
+  };
+  const handleHexChange = (e: any) => {
+    let input = e.target.value;
+    const hex = /^[0-9A-Fa-f]*$/;
+    if (hex.test(input) || input === '') {
+      if (parseInt(input, 16) <= +0xffff) {
+        setHexToRead(input);
+      }
+    }
+  };
+
+  const handleReadMemory = (e: any) => {
+    e.preventDefault();
+    console.log(
+      `Memory At Location 0x${hexToRead}: ${memory.memory[
+        parseInt(hexToRead, 16)
+      ].toString(16)}`
+    );
+    setHexToRead('');
+  };
+  const handleJumpToTick = (e: any) => {
+    e.preventDefault();
+    if (!rom) {
+      return;
+    }
+    while (cpu.elapsedCycles <= runUntil - 1) {
+      cpu.runOneInstruction(memory);
+    }
+    setState((prev) => !prev);
+  };
+
   const reset = () => {
     setRun(false);
     cpu.reset(memory);
     memory.resetMemory();
     memory.loadProgram(rom);
     cpu.PC = 0xc000;
+    cpu.elapsedCycles = 7;
   };
 
   const wrap = () => {
-    cpu.tick(memory);
-    cpu.elapsedCycles++;
+    cpu.runOneInstruction(memory);
+    // cpu.tick(memory);
     setState((prev) => !prev);
   };
-  useInterval(wrap, run ? 1 : null);
+  useInterval(wrap, run ? 0.00001 : null);
 
   return (
     <div className='debugPage' tabIndex={0} onKeyDown={(e) => handleKeyDown(e)}>
@@ -93,8 +133,35 @@ const DebugPage = ({ cpu, memory }: Props) => {
         />
         <p>Space - Run single command</p>
         <p>R - {run ? 'Stop' : 'Run'} Program</p>
+        <p>S - Reset</p>
         <DebugPcLocation PC={cpu.PC} memory={memory} />
         <DebugStack SP={cpu.SP} memory={memory} />
+      </div>
+      <div className='debugForms'>
+        <form onSubmit={(e) => handleJumpToTick(e)}>
+          <label>
+            Run until chosen tick:
+            <input
+              type='text'
+              name='value'
+              value={runUntil}
+              onChange={(e) => handleChange(e)}
+            />
+          </label>
+          <input type='submit' value='Run' />
+        </form>
+        <form onSubmit={(e) => handleReadMemory(e)}>
+          <label>
+            Read memory at hex:
+            <input
+              type='text'
+              name='value'
+              value={hexToRead}
+              onChange={(e) => handleHexChange(e)}
+            />
+          </label>
+          <input type='submit' value='Read' />
+        </form>
       </div>
     </div>
   );

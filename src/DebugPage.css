@@ -57,3 +57,11 @@
   display: grid;
   grid-template-rows: repeat(3, 1fr);
 }
+
+.debugForms {
+  margin-top: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 5rem;
+  font-size: x-large;
+}
