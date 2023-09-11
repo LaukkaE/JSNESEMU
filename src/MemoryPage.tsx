@@ -1,4 +1,3 @@
-import React from 'react';
 import { Memory } from './cpu/Cpu';
 
 type Props = { memory: Memory; startPos: number };

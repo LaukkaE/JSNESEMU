@@ -740,7 +740,7 @@ describe('CPU LD flags tests', () => {
   test('Zero flag set when byte is zero', () => {
     cpu.reset(mem);
     mem.memory[0x0] = OPCODES.LDA_IMMEDIATE;
-    // mem.memory[0x1] = 0x30;
+    mem.memory[0x1] = 0x0;
     cpu.cycles = 2;
     cpu.execute(mem);
     expect(cpu.cycles).toBe(0);
@@ -1102,17 +1102,17 @@ describe('CPU Transfer tests', () => {
     cpu.execute(mem);
 
     expect(cpu.cycles).toBe(0);
-    expect(cpu.registers.X).toEqual(0x1ff);
+    expect(cpu.registers.X).toEqual(0xff);
   });
   test('TXS_IMPLIED', () => {
     cpu.reset(mem);
-    cpu.registers.X = 0x105;
+    cpu.registers.X = 0xad;
     cpu.cycles = 2;
     mem.memory[0x0] = OPCODES.TXS_IMPLIED;
     cpu.execute(mem);
 
     expect(cpu.cycles).toBe(0);
-    expect(cpu.SP).toEqual(0x105);
+    expect(cpu.SP).toEqual(0x1ad);
   });
 });
 describe('CPU Jump tests', () => {
@@ -1128,8 +1128,8 @@ describe('CPU Jump tests', () => {
     expect(cpu.registers.A).toEqual(0x66); //test that jsr jumps to LDA and loads A
     expect(cpu.PC).toEqual(0x3032); //pc should be after LDA immediate
     expect(cpu.cycles).toBe(0); //cycles used should be 6 + 2
-    expect(cpu.SP).toBe(0xff - 2); //stackpointer should be decremented (jos initialize vaihtunu ni failaa)
-    let word = mem.memory[0xfe] | (mem.memory[0xff] << 8);
+    expect(cpu.SP).toBe(0x1ff - 2); //stackpointer should be decremented (jos initialize vaihtunu ni failaa)
+    let word = mem.memory[0x1fe] | (mem.memory[0x1ff] << 8);
     expect(word).toEqual(0x2); //PC should be stored in memory at SP
   });
   test('JSR + RTS', () => {
@@ -1141,9 +1141,9 @@ describe('CPU Jump tests', () => {
     mem.memory[0x3030] = OPCODES.RTS_IMPLIED;
     cpu.cycles = 12;
     cpu.execute(mem);
-    expect(cpu.PC).toEqual(0x50);
+    expect(cpu.PC).toEqual(0x53);
     expect(cpu.cycles).toEqual(0);
-    expect(cpu.SP).toEqual(0xff);
+    expect(cpu.SP).toEqual(0x1ff);
   });
   test('JMP_ABSOLUTE', () => {
     cpu.reset(mem);
@@ -1160,8 +1160,8 @@ describe('CPU Jump tests', () => {
     mem.memory[0x0] = OPCODES.JMP_INDIRECT;
     mem.memory[0x1] = 0x30;
     mem.memory[0x2] = 0x22; //0x2230
-    mem.memory[0x30] = 0xfc;
-    mem.memory[0x22] = 0xba; //0xbafc
+    mem.memory[0x2230] = 0xfc;
+    mem.memory[0x2231] = 0xba; //0xbafc
     cpu.cycles = 5;
     cpu.execute(mem);
     expect(cpu.PC).toEqual(0xbafc);
@@ -3028,7 +3028,7 @@ describe('CPU STACK tests', () => {
     mem.memory[0x0] = OPCODES.PHA_IMPLIED;
     cpu.cycles = 3;
     cpu.execute(mem);
-    expect(mem.memory[0xff]).toEqual(0x8);
+    expect(mem.memory[0x1ff]).toEqual(0x8);
     expect(cpu.SP).toEqual(0x1fe);
     expect(cpu.cycles).toBe(0);
   });
@@ -3039,7 +3039,7 @@ describe('CPU STACK tests', () => {
     mem.memory[0x0] = OPCODES.PHP_IMPLIED;
     cpu.cycles = 3;
     cpu.execute(mem);
-    expect(mem.memory[0xff]).toEqual(0x81);
+    expect(mem.memory[0x1ff]).toEqual(0xa1);
     expect(cpu.SP).toEqual(0x1fe);
     expect(cpu.cycles).toBe(0);
   });
@@ -3060,7 +3060,7 @@ describe('CPU STACK tests', () => {
   test('PLP TEST', () => {
     cpu.reset(mem);
     mem.memory[0x0] = OPCODES.PLP_IMPLIED;
-    mem.memory[0xff] = 0xc1; // 1100 0001
+    mem.memory[0x1ff] = 0xc1; // 1100 0001
     cpu.SP--;
     cpu.cycles = 4;
     cpu.execute(mem);
@@ -3109,7 +3109,7 @@ describe('System Function tests', () => {
     expect(cpu.flags.B).toBe(true);
     expect(mem.memory[0x1ff]).toBe(0x80);
     expect(mem.memory[0x1fe]).toBe(0x81); //PC 8001
-    expect(mem.memory[0x1fd]).toBe(0x81); //flags
+    expect(mem.memory[0x1fd]).toBe(0xa1); //flags
     expect(cpu.cycles).toBe(0);
   });
   test('BRK + RTI test', () => {

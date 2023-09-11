@@ -248,7 +248,7 @@ class CPU {
   reset(memory: Memory) {
     // memory.resetMemory();
     this.PC = memory.memory[0xfffc] | (memory.memory[0xfffd] << 8); //  resetissä lue fffc ja fffd combinee ja laita pc. eli 0x10 + 0x42 : pc = 0x4210, tyhjällä muistilla aina 0x0
-    this.SP = 0x1fd;
+    this.SP = 0x1ff;
     this.cycles = 0;
     this.clearFlags();
     this.clearRegisters();
@@ -461,7 +461,6 @@ class CPU {
     let zeroPageAddress = this.getByte(memory);
     let vector = this.readVector(memory, zeroPageAddress);
     let vectorY = vector + this.registers.Y;
-    console.log(vectorY.toString(16));
     vectorY &= 0xffff; //WRAP muistin alkuun jos mennään muistin ulkopuolelle
     this.pageCrossBoundaryCheck(vectorY, vector);
     return this.readByte(memory, vectorY);
@@ -476,12 +475,12 @@ class CPU {
   runOneInstruction(memory: Memory) {
     do {
       this.cycles++;
-    } while (this.cycles < 0);
+    } while (this.cycles < 1);
     this.execute(memory);
   }
 
   execute(memory: Memory) {
-    while (this.cycles >= 0) {
+    while (this.cycles > 0) {
       let opcode = this.getByte(memory); //1 cycle
       switch (opcode) {
         //ADC INSTRUCTIONS
