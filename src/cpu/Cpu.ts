@@ -1,5 +1,6 @@
 class Memory {
-  memory = new Uint8Array(1024 * 64);
+  memory = new Uint8Array(1024 * 64); //addressable space 0x0 - 0xffff
+  //0x00-
 
   resetMemory() {
     this.memory = new Uint8Array(1024 * 64).fill(0x00);
@@ -11,16 +12,6 @@ class Memory {
   writeByte(address: number, value: number) {
     this.memory[address] = value;
   }
-  // loadProgram(filepath: string) {
-  //   const romContent = fs
-  //     .readFileSync(filepath, 'hex')
-  //     .split(/(.{2})/)
-  //     .filter((e) => e);
-  //   for (let i = 0x10; i < 0x4010; i++) {
-  //     this.memory[0x8000 - 0x10 + i] = parseInt(romContent[i], 16);
-  //     this.memory[0xc000 - 0x10 + i] = parseInt(romContent[i], 16);
-  //   }
-  // }
   loadProgram(rom: any) {
     for (let i = 0x10; i < 0x4010; i++) {
       this.memory[0x8000 - 0x10 + i] = rom[i];
@@ -223,7 +214,7 @@ class CPU {
     C: false, //Carry
     Z: false, //Zero
     I: false, //Interrupt Disable
-    D: false, //Decimal Mode (disabled in NES)
+    D: false, //Decimal Mode (Decimal mode not implemented in NES, but flag is)
     B: false, //Break Command
     V: false, //Overflow
     N: false, //Negative
@@ -247,11 +238,33 @@ class CPU {
   //todo: oikeessa resetissä muistia ei purgeta
   reset(memory: Memory) {
     // memory.resetMemory();
-    this.PC = memory.memory[0xfffc] | (memory.memory[0xfffd] << 8); //  resetissä lue fffc ja fffd combinee ja laita pc. eli 0x10 + 0x42 : pc = 0x4210, tyhjällä muistilla aina 0x0
+    this.PC = memory.memory[0xfffc] | (memory.memory[0xfffd] << 8);
     this.SP = 0x1ff;
     this.cycles = 0;
     this.clearFlags();
     this.clearRegisters();
+  }
+  irq(memory: Memory) {
+    if (!this.flags.I) {
+      this.pushVectorToStack(memory, this.PC);
+      this.flags.B = false;
+      this.flags.I = true;
+      let constructedByte = this.constructByteFromFlags();
+      this.pushByteToStack(memory, constructedByte);
+      this.PC = memory.memory[0xfffe] | (memory.memory[0xffff] << 8);
+      this.elapsedCycles = 8;
+      this.cycles -= 8;
+    }
+  }
+  nmi(memory: Memory) {
+    this.pushVectorToStack(memory, this.PC);
+    this.flags.B = false;
+    this.flags.I = true;
+    let constructedByte = this.constructByteFromFlags();
+    this.pushByteToStack(memory, constructedByte);
+    this.PC = memory.memory[0xfffe] | (memory.memory[0xffff] << 8);
+    this.elapsedCycles = 8;
+    this.cycles -= 8;
   }
 
   constructByteFromFlags() {
@@ -391,7 +404,7 @@ class CPU {
   }
   pushVectorToStack(memory: Memory, vector: number) {
     memory.writeVector(vector, this.SP);
-    this.SP -= 2; //TODO Stackin tarkistus
+    this.SP -= 2;
   }
   pushByteToStack(memory: Memory, byte: number) {
     memory.writeByte(this.SP, byte);
@@ -468,7 +481,7 @@ class CPU {
 
   tick(memory: Memory) {
     this.cycles++;
-    if (this.cycles >= 0) {
+    if (this.cycles > 0) {
       this.execute(memory);
     }
   }
@@ -1728,10 +1741,7 @@ class CPU {
           //5 cycles
           let firstAddress = this.readByte(memory, this.PC);
           let secondAddress = this.readByte(memory, this.PC + 1);
-          // let jumpAddress = this.readVector(
-          //   memory,
-          //   firstAddress | (secondAddress << 8)
-          // );
+
           let combined = firstAddress | (secondAddress << 8);
           let firstByte = memory.memory[combined]; //if first read is xxff, then second is xx00
           let secondByte =

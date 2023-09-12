@@ -95,7 +95,7 @@ const DebugPage = ({ cpu, memory }: Props) => {
     // cpu.tick(memory);
     setState((prev) => !prev);
   };
-  useInterval(wrap, run ? 0.00001 : null);
+  useInterval(wrap, run ? 0.1 : null);
 
   return (
     <div className='debugPage' tabIndex={0} onKeyDown={(e) => handleKeyDown(e)}>
