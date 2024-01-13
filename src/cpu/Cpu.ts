@@ -1,24 +1,4 @@
-class MemoryBus {
-  memory = new Uint8Array(1024 * 64); //addressable space 0x0 - 0xffff
-  //0x00-
-
-  resetMemory() {
-    this.memory = new Uint8Array(1024 * 64).fill(0x00);
-  }
-  writeVector(vector: number, address: number) {
-    this.memory[address - 1] = vector & 0xff;
-    this.memory[address] = vector >> 8;
-  }
-  writeByte(address: number, value: number) {
-    this.memory[address] = value;
-  }
-  loadProgram(rom: any) {
-    for (let i = 0x10; i < 0x4010; i++) {
-      this.memory[0x8000 - 0x10 + i] = rom[i];
-      this.memory[0xc000 - 0x10 + i] = rom[i];
-    }
-  }
-}
+import { MemoryBus } from './MemoryBus';
 
 enum OPCODES { //num of Cycles
   // ADC - Add with Carry
@@ -1756,4 +1736,4 @@ class CPU {
     }
   }
 }
-export { CPU, MemoryBus, OPCODES };
+export { CPU, OPCODES };

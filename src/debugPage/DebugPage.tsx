@@ -1,14 +1,16 @@
 import MemoryPage from './MemoryPage';
-import { CPU, Memory } from './cpu/Cpu';
+import { CPU } from '../cpu/Cpu';
+import { MemoryBus } from '../cpu/MemoryBus';
 import './DebugPage.css';
 import { useState } from 'react';
 import { FileUploader } from 'react-drag-drop-files';
-import { useInterval } from './utils/useInterval';
-import DebugPcLocation from './debugPage/DebugPcLocation';
-import DebugStack from './debugPage/DebugStack';
+import { useInterval } from '../utils/useInterval';
+import DebugPcLocation from './DebugPcLocation';
+import DebugStack from './DebugStack';
 
-type Props = { cpu: CPU; memory: Memory };
+type Props = { cpu: CPU; memory: MemoryBus };
 const fileTypes = ['nes'];
+const PCStart = 0x8000;
 
 const DebugPage = ({ cpu, memory }: Props) => {
   const [_, setState] = useState(false);
@@ -19,7 +21,7 @@ const DebugPage = ({ cpu, memory }: Props) => {
   const handleKeyDown = (e: any) => {
     if (!rom) return;
     if (e.key === ' ') {
-      cpu.runOneInstruction(memory);
+      cpu.runOneInstruction();
     }
     if (e.key === 'r' || e.key === 'R') {
       setRun((prev) => !prev);
@@ -37,8 +39,8 @@ const DebugPage = ({ cpu, memory }: Props) => {
       let arrayBuffer = reader.result;
       var bytes = new Uint8Array(arrayBuffer as ArrayBuffer);
       memory.loadProgram(bytes);
-      cpu.reset(memory);
-      cpu.PC = 0xc000;
+      cpu.reset();
+      cpu.PC = PCStart;
       cpu.elapsedCycles = 7;
       setRom(bytes);
       setState((prev) => !prev);
@@ -76,22 +78,24 @@ const DebugPage = ({ cpu, memory }: Props) => {
       return;
     }
     while (cpu.elapsedCycles <= runUntil - 1) {
-      cpu.runOneInstruction(memory);
+      cpu.runOneInstruction();
     }
     setState((prev) => !prev);
   };
 
   const reset = () => {
     setRun(false);
-    cpu.reset(memory);
+    cpu.reset();
     memory.resetMemory();
-    memory.loadProgram(rom);
-    cpu.PC = 0xc000;
+    if (rom) {
+      memory.loadProgram(rom);
+    }
+    // cpu.PC = PCStart;
     cpu.elapsedCycles = 7;
   };
 
   const wrap = () => {
-    cpu.runOneInstruction(memory);
+    cpu.runOneInstruction();
     // cpu.tick(memory);
     setState((prev) => !prev);
   };

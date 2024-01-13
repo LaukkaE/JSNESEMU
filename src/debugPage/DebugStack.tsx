@@ -1,7 +1,8 @@
-import React from 'react';
-import { Memory } from '../cpu/Cpu';
+// import { MemoryBus } from '../cpu/Cpu';
 
-type Props = { SP: number; memory: Memory };
+import { MemoryBus } from '../cpu/MemoryBus';
+
+type Props = { SP: number; memory: MemoryBus };
 
 const DebugStack = ({ SP, memory }: Props) => {
   const constructStack = () => {

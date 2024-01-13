@@ -1,11 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { CPU, Memory } from './cpu/Cpu.ts';
-import DebugPage from './DebugPage.tsx';
+import { CPU } from './cpu/Cpu.ts';
+import { MemoryBus } from './cpu/MemoryBus.ts';
+import DebugPage from './debugPage/DebugPage.tsx';
 
-let cpu = new CPU();
-let memory = new Memory();
-cpu.reset(memory);
+let memory = new MemoryBus();
+let cpu = new CPU(memory);
+cpu.reset();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

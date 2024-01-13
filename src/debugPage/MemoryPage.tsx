@@ -1,6 +1,6 @@
-import { Memory } from './cpu/Cpu';
+import { MemoryBus } from '../cpu/MemoryBus';
 
-type Props = { memory: Memory; startPos: number };
+type Props = { memory: MemoryBus; startPos: number };
 
 const MemoryPage = ({ memory, startPos }: Props) => {
   const constructPage = () => {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
-import { CPU, MemoryBus, OPCODES } from '../cpu/Cpu';
+import { CPU, OPCODES } from '../cpu/Cpu';
+import { MemoryBus } from '../cpu/MemoryBus';
 
 let mem = new MemoryBus();
 let cpu = new CPU(mem);
