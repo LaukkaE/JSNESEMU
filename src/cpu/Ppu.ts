@@ -5,9 +5,9 @@ class PPU {
   palette_table = new Uint8Array(32); //oikeesti 3f00 -- 3f1f
   oam_data = new Uint8Array(256); //sprite memory
   chr_rom = new Uint8Array();
-  memory: MemoryBus;
-  constructor(memory: MemoryBus) {
-    this.memory = memory;
+  memoryBus: MemoryBus;
+  constructor(memoryBus: MemoryBus) {
+    this.memoryBus = memoryBus;
   }
   PPUCTRL() {}
 

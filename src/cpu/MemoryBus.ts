@@ -1,7 +1,28 @@
+import { CPU } from './Cpu';
+import { PPU } from './Ppu';
+
 class MemoryBus {
   memory = new Uint8Array(1024 * 64); //addressable space 0x0 - 0xffff
   //0x00-
+  CPU: CPU | null;
+  PPU: PPU | null;
+  constructor() {
+    this.CPU = null;
+    this.PPU = null;
+  }
 
+  setPPU(PPU: PPU) {
+    this.PPU = PPU;
+  }
+  setCPU(CPU: CPU) {
+    this.CPU = CPU;
+  }
+  triggerNMI() {
+    if (!this.CPU) {
+      throw 'No CPU initialized';
+    }
+    this.CPU?.nmi();
+  }
   resetMemory() {
     this.memory = new Uint8Array(1024 * 64).fill(0x00);
   }

@@ -7,8 +7,9 @@ import { FileUploader } from 'react-drag-drop-files';
 import { useInterval } from '../utils/useInterval';
 import DebugPcLocation from './DebugPcLocation';
 import DebugStack from './DebugStack';
+import { PPU } from '../cpu/Ppu';
 
-type Props = { cpu: CPU; memory: MemoryBus };
+type Props = { cpu: CPU; memory: MemoryBus; ppu: PPU };
 const fileTypes = ['nes'];
 const PCStart = 0x8000;
 
@@ -120,6 +121,7 @@ const DebugPage = ({ cpu, memory }: Props) => {
           <p style={{ color: `${cpu.flags.Z ? 'green' : 'red'}` }}>Z</p>
           <p style={{ color: `${cpu.flags.C ? 'green' : 'red'}` }}>C</p>
         </div>
+        <button onClick={() => memory.triggerNMI()}>Trigger NMI</button>
         <div className='registers'>
           <h2>Registers</h2>
           <p>{`A: $${cpu.registers.A.toString(16)}`}</p>

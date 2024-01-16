@@ -243,6 +243,7 @@ class CPU {
     }
   }
   nmi() {
+    console.log('NMI');
     this.pushVectorToStack(this.PC);
     this.flags.B = false;
     this.flags.I = true;
