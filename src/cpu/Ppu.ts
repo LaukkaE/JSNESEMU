@@ -1,9 +1,9 @@
 import { MemoryBus } from './MemoryBus';
 
 class PPU {
-  vram = new Uint8Array(2048); //oikeesti 2000 -- 3eff
+  vram = new Uint8Array(2048).fill(0); //oikeesti 2000 -- 3eff
   palette_table = new Uint8Array(32); //oikeesti 3f00 -- 3f1f
-  oam_data = new Uint8Array(256); //sprite memory
+  oam_data = new Uint8Array(256).fill(0); //sprite memory
   chr_rom = new Uint8Array();
   memoryBus: MemoryBus;
   constructor(memoryBus: MemoryBus) {

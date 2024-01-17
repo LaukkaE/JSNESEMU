@@ -4,11 +4,11 @@ import { PPU } from './Ppu';
 class MemoryBus {
   memory = new Uint8Array(1024 * 64); //addressable space 0x0 - 0xffff
   //0x00-
-  CPU: CPU | null;
-  PPU: PPU | null;
+  CPU: CPU;
+  PPU: PPU;
   constructor() {
-    this.CPU = null;
-    this.PPU = null;
+    this.CPU = new CPU(this);
+    this.PPU = new PPU(this);
   }
 
   setPPU(PPU: PPU) {

@@ -9,11 +9,11 @@ import DebugPcLocation from './DebugPcLocation';
 import DebugStack from './DebugStack';
 import { PPU } from '../cpu/Ppu';
 
-type Props = { cpu: CPU; memory: MemoryBus; ppu: PPU };
+type Props = { memory: MemoryBus };
 const fileTypes = ['nes'];
 const PCStart = 0x8000;
 
-const DebugPage = ({ cpu, memory }: Props) => {
+const DebugPage = ({ memory }: Props) => {
   const [_, setState] = useState(false);
   const [run, setRun] = useState(false);
   const [runUntil, setRunUntil] = useState(0);
@@ -22,7 +22,7 @@ const DebugPage = ({ cpu, memory }: Props) => {
   const handleKeyDown = (e: any) => {
     if (!rom) return;
     if (e.key === ' ') {
-      cpu.runOneInstruction();
+      memory.CPU.runOneInstruction();
     }
     if (e.key === 'r' || e.key === 'R') {
       setRun((prev) => !prev);
@@ -40,9 +40,9 @@ const DebugPage = ({ cpu, memory }: Props) => {
       let arrayBuffer = reader.result;
       var bytes = new Uint8Array(arrayBuffer as ArrayBuffer);
       memory.loadProgram(bytes);
-      cpu.reset();
-      cpu.PC = PCStart;
-      cpu.elapsedCycles = 7;
+      memory.CPU.reset();
+      memory.CPU.PC = PCStart;
+      memory.CPU.elapsedCycles = 7;
       setRom(bytes);
       setState((prev) => !prev);
     };
@@ -78,25 +78,25 @@ const DebugPage = ({ cpu, memory }: Props) => {
     if (!rom) {
       return;
     }
-    while (cpu.elapsedCycles <= runUntil - 1) {
-      cpu.runOneInstruction();
+    while (memory.CPU.elapsedCycles <= runUntil - 1) {
+      memory.CPU.runOneInstruction();
     }
     setState((prev) => !prev);
   };
 
   const reset = () => {
     setRun(false);
-    cpu.reset();
+    memory.CPU.reset();
     memory.resetMemory();
     if (rom) {
       memory.loadProgram(rom);
     }
     // cpu.PC = PCStart;
-    cpu.elapsedCycles = 7;
+    memory.CPU.elapsedCycles = 7;
   };
 
   const wrap = () => {
-    cpu.runOneInstruction();
+    memory.CPU.runOneInstruction();
     // cpu.tick(memory);
     setState((prev) => !prev);
   };
@@ -113,23 +113,23 @@ const DebugPage = ({ cpu, memory }: Props) => {
       <div className='debugCpu'>
         <h2>Status Flags: </h2>
         <div className='flags'>
-          <p style={{ color: `${cpu.flags.N ? 'green' : 'red'}` }}>N</p>
-          <p style={{ color: `${cpu.flags.V ? 'green' : 'red'}` }}>V</p>
-          <p style={{ color: `${cpu.flags.B ? 'green' : 'red'}` }}>B</p>
-          <p style={{ color: `${cpu.flags.D ? 'green' : 'red'}` }}>D</p>
-          <p style={{ color: `${cpu.flags.I ? 'green' : 'red'}` }}>I</p>
-          <p style={{ color: `${cpu.flags.Z ? 'green' : 'red'}` }}>Z</p>
-          <p style={{ color: `${cpu.flags.C ? 'green' : 'red'}` }}>C</p>
+          <p style={{ color: `${memory.CPU.flags.N ? 'green' : 'red'}` }}>N</p>
+          <p style={{ color: `${memory.CPU.flags.V ? 'green' : 'red'}` }}>V</p>
+          <p style={{ color: `${memory.CPU.flags.B ? 'green' : 'red'}` }}>B</p>
+          <p style={{ color: `${memory.CPU.flags.D ? 'green' : 'red'}` }}>D</p>
+          <p style={{ color: `${memory.CPU.flags.I ? 'green' : 'red'}` }}>I</p>
+          <p style={{ color: `${memory.CPU.flags.Z ? 'green' : 'red'}` }}>Z</p>
+          <p style={{ color: `${memory.CPU.flags.C ? 'green' : 'red'}` }}>C</p>
         </div>
         <button onClick={() => memory.triggerNMI()}>Trigger NMI</button>
         <div className='registers'>
           <h2>Registers</h2>
-          <p>{`A: $${cpu.registers.A.toString(16)}`}</p>
-          <p>{`X: $${cpu.registers.X.toString(16)}`}</p>
-          <p>{`Y: $${cpu.registers.Y.toString(16)}`}</p>
-          <p>{`SP $${cpu.SP.toString(16)}`}</p>
-          <p>{`PC $${cpu.PC.toString(16)}`}</p>
-          <p>{`Elapsed ticks ${cpu.elapsedCycles}`}</p>
+          <p>{`A: $${memory.CPU.registers.A.toString(16)}`}</p>
+          <p>{`X: $${memory.CPU.registers.X.toString(16)}`}</p>
+          <p>{`Y: $${memory.CPU.registers.Y.toString(16)}`}</p>
+          <p>{`SP $${memory.CPU.SP.toString(16)}`}</p>
+          <p>{`PC $${memory.CPU.PC.toString(16)}`}</p>
+          <p>{`Elapsed ticks ${memory.CPU.elapsedCycles}`}</p>
         </div>
         <h1>LOAD ROM</h1>
         <FileUploader
@@ -140,8 +140,8 @@ const DebugPage = ({ cpu, memory }: Props) => {
         <p>Space - Run single command</p>
         <p>R - {run ? 'Stop' : 'Run'} Program</p>
         <p>S - Reset</p>
-        <DebugPcLocation PC={cpu.PC} memory={memory} />
-        <DebugStack SP={cpu.SP} memory={memory} />
+        <DebugPcLocation PC={memory.CPU.PC} memory={memory} />
+        <DebugStack SP={memory.CPU.SP} memory={memory} />
       </div>
       <div className='debugForms'>
         <form onSubmit={(e) => handleJumpToTick(e)}>

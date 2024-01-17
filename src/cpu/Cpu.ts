@@ -181,6 +181,8 @@ enum OPCODES { //num of Cycles
 }
 
 class CPU {
+  CPU_SPEED: number = 1.79e6; // cpu frequency (1.79@ntsc,1.66@pal)
+  cycleTime = (1 / this.CPU_SPEED) * 1000; // time it takes to run one cycle
   cycles = 0; //Ticks to be computed
   elapsedCycles = 0; //debug tracking
   PC = 0x0000; //Program counter
@@ -219,7 +221,7 @@ class CPU {
     this.registers.Y = 0;
   }
 
-  //todo: oikeessa resetissä muistia ei purgeta
+  //todo:cold&warm reset https://www.nesdev.org/wiki/CPU_power_up_state
   reset() {
     // memory.resetMemory();
     this.PC =
