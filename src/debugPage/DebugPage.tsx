@@ -1,5 +1,4 @@
 import MemoryPage from './MemoryPage';
-import { CPU } from '../cpu/Cpu';
 import { MemoryBus } from '../cpu/MemoryBus';
 import './DebugPage.css';
 import { useState } from 'react';
@@ -7,11 +6,10 @@ import { FileUploader } from 'react-drag-drop-files';
 import { useInterval } from '../utils/useInterval';
 import DebugPcLocation from './DebugPcLocation';
 import DebugStack from './DebugStack';
-import { PPU } from '../cpu/Ppu';
 
 type Props = { memory: MemoryBus };
 const fileTypes = ['nes'];
-const PCStart = 0x8000;
+const PCStart = 0xc000;
 
 const DebugPage = ({ memory }: Props) => {
   const [_, setState] = useState(false);
@@ -91,7 +89,7 @@ const DebugPage = ({ memory }: Props) => {
     if (rom) {
       memory.loadProgram(rom);
     }
-    // cpu.PC = PCStart;
+    memory.CPU.PC = PCStart;
     memory.CPU.elapsedCycles = 7;
   };
 

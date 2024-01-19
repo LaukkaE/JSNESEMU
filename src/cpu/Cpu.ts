@@ -280,7 +280,8 @@ class CPU {
   }
   getByte() {
     // fetch byte from mem using PC, takes 1 cycle
-    let byte = this.memoryBus.memory[this.PC];
+    // let byte = this.memoryBus.memory[this.PC];
+    let byte = this.memoryBus.readByte(this.PC);
     this.PC++;
     this.cycles--;
     this.elapsedCycles++;
@@ -288,9 +289,9 @@ class CPU {
   }
   getVector() {
     //fetch 16 bit vector from mem, takes 2 cycles
-    let firstByte = this.memoryBus.memory[this.PC];
+    let firstByte = this.memoryBus.readByte(this.PC);
     this.PC++;
-    let secondByte = this.memoryBus.memory[this.PC];
+    let secondByte = this.memoryBus.readByte(this.PC);
     this.PC++;
     this.cycles -= 2;
     this.elapsedCycles += 2;
@@ -298,9 +299,9 @@ class CPU {
   }
   readVector(address: number) {
     //read 16 bit vector from mem, takes 2 cycles
-    let firstByte = this.memoryBus.memory[address]; //jos kutsutaan zero pagelle 0xff niin wrap zeropagen alkuun
+    let firstByte = this.memoryBus.readByte(address); //jos kutsutaan zero pagelle 0xff niin wrap zeropagen alkuun
     let nextAddress = address !== 0xff ? address + 1 : (address + 1) & 0xff;
-    let secondByte = this.memoryBus.memory[nextAddress];
+    let secondByte = this.memoryBus.readByte(nextAddress);
     this.cycles -= 2;
     this.elapsedCycles += 2;
     return firstByte | (secondByte << 8);
@@ -308,7 +309,7 @@ class CPU {
 
   readByte(address: number) {
     // read byte from mem, takes 1 cycle,
-    let byte = this.memoryBus.memory[address];
+    let byte = this.memoryBus.readByte(address);
     this.cycles--;
     this.elapsedCycles++;
     return byte;

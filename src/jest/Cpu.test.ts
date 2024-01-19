@@ -111,8 +111,8 @@ describe('CPU LDA tests', () => {
     mem.memory[0x0] = OPCODES.LDA_INDEXED_INDIRECT_X;
     mem.memory[0x1] = 0x4;
     mem.memory[0x14] = 0x69; // no wrap
-    mem.memory[0x15] = 0x32; // 0x3269
-    mem.memory[0x3269] = 0x44;
+    mem.memory[0x15] = 0x42; // 0x3269
+    mem.memory[0x4269] = 0x44;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.registers.A).toEqual(0x44);
@@ -275,8 +275,8 @@ describe('CPU AND tests', () => {
     mem.memory[0x0] = OPCODES.AND_INDEXED_INDIRECT_X;
     mem.memory[0x1] = 0x4;
     mem.memory[0x14] = 0x69; // no wrap
-    mem.memory[0x15] = 0x32; // 0x3269
-    mem.memory[0x3269] = 0x44;
+    mem.memory[0x15] = 0x42; // 0x3269
+    mem.memory[0x4269] = 0x44;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.registers.A).toEqual(0x4);
@@ -442,8 +442,8 @@ describe('CPU EOR tests', () => {
     mem.memory[0x0] = OPCODES.EOR_INDEXED_INDIRECT_X;
     mem.memory[0x1] = 0x4;
     mem.memory[0x14] = 0x69; // no wrap
-    mem.memory[0x15] = 0x32; // 0x3269
-    mem.memory[0x3269] = 0x44;
+    mem.memory[0x15] = 0x42; // 0x3269
+    mem.memory[0x4269] = 0x44;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.registers.A).toEqual(0x5b);
@@ -609,8 +609,8 @@ describe('CPU ORA tests', () => {
     mem.memory[0x0] = OPCODES.ORA_INDEXED_INDIRECT_X;
     mem.memory[0x1] = 0x4;
     mem.memory[0x14] = 0x69; // no wrap
-    mem.memory[0x15] = 0x32; // 0x3269
-    mem.memory[0x3269] = 0x44;
+    mem.memory[0x15] = 0x42; // 0x3269
+    mem.memory[0x4269] = 0x44;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.registers.A).toEqual(0x5f);
@@ -1121,13 +1121,13 @@ describe('CPU Jump tests', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.JSR_ABSOLUTE;
     mem.memory[0x1] = 0x30;
-    mem.memory[0x2] = 0x30;
-    mem.memory[0x3030] = OPCODES.LDA_IMMEDIATE;
-    mem.memory[0x3031] = 0x66;
+    mem.memory[0x2] = 0x40;
+    mem.memory[0x4030] = OPCODES.LDA_IMMEDIATE;
+    mem.memory[0x4031] = 0x66;
     cpu.cycles = 8;
     cpu.execute();
     expect(cpu.registers.A).toEqual(0x66); //test that jsr jumps to LDA and loads A
-    expect(cpu.PC).toEqual(0x3032); //pc should be after LDA immediate
+    expect(cpu.PC).toEqual(0x4032); //pc should be after LDA immediate
     expect(cpu.cycles).toBe(0); //cycles used should be 6 + 2
     expect(cpu.SP).toBe(0x1ff - 2); //stackpointer should be decremented (jos initialize vaihtunu ni failaa)
     let word = mem.memory[0x1fe] | (mem.memory[0x1ff] << 8);
@@ -1138,8 +1138,8 @@ describe('CPU Jump tests', () => {
     cpu.PC = 0x50;
     mem.memory[0x50] = OPCODES.JSR_ABSOLUTE;
     mem.memory[0x51] = 0x30;
-    mem.memory[0x52] = 0x30; //Jump to 3030
-    mem.memory[0x3030] = OPCODES.RTS_IMPLIED;
+    mem.memory[0x52] = 0x40; //Jump to 4030
+    mem.memory[0x4030] = OPCODES.RTS_IMPLIED;
     cpu.cycles = 12;
     cpu.execute();
     expect(cpu.PC).toEqual(0x53);
@@ -1389,8 +1389,8 @@ describe('CPU ADC tests', () => {
     mem.memory[0x0] = OPCODES.ADC_INDEXED_INDIRECT_X;
     mem.memory[0x1] = 0x4;
     mem.memory[0x14] = 0x69; // no wrap
-    mem.memory[0x15] = 0x32; // 0x3269
-    mem.memory[0x3269] = 0x44;
+    mem.memory[0x15] = 0x42; // 0x3269
+    mem.memory[0x4269] = 0x44;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.registers.A).toEqual(0x49);
@@ -1599,8 +1599,8 @@ describe('CPU SBC tests', () => {
     mem.memory[0x0] = OPCODES.SBC_INDEXED_INDIRECT_X;
     mem.memory[0x1] = 0x4;
     mem.memory[0x14] = 0x69; // no wrap
-    mem.memory[0x15] = 0x32; // 0x3269
-    mem.memory[0x3269] = 0x44;
+    mem.memory[0x15] = 0x42; // 0x3269
+    mem.memory[0x4269] = 0x44;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.registers.A).toEqual(0xc0);
@@ -1793,24 +1793,24 @@ describe('CPU DECREMENT & INCREMENT tests', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.INC_ABSOLUTE;
     mem.memory[0x1] = 0x33;
-    mem.memory[0x2] = 0x12;
-    mem.memory[0x1233] = 0xff;
+    mem.memory[0x2] = 0x42;
+    mem.memory[0x4233] = 0xff;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x1233]).toEqual(0x0);
+    expect(mem.memory[0x4233]).toEqual(0x0);
     expect(cpu.flags.Z).toBe(true);
   });
   test('INC_ABSOLUTE Normal', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.INC_ABSOLUTE;
     mem.memory[0x1] = 0x33;
-    mem.memory[0x2] = 0x12;
-    mem.memory[0x1233] = 0xda;
+    mem.memory[0x2] = 0x42;
+    mem.memory[0x4233] = 0xda;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x1233]).toEqual(0xdb);
+    expect(mem.memory[0x4233]).toEqual(0xdb);
     expect(cpu.flags.Z).toBe(false);
   });
   test('INC_ABSOLUTE_X OVERFLOW TEST', () => {
@@ -1818,12 +1818,12 @@ describe('CPU DECREMENT & INCREMENT tests', () => {
     cpu.registers.X = 0x2;
     mem.memory[0x0] = OPCODES.INC_ABSOLUTE_X;
     mem.memory[0x1] = 0x33;
-    mem.memory[0x2] = 0x12;
-    mem.memory[0x1235] = 0xff;
+    mem.memory[0x2] = 0x42;
+    mem.memory[0x4235] = 0xff;
     cpu.cycles = 7;
     cpu.execute();
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x1235]).toEqual(0x0);
+    expect(mem.memory[0x4235]).toEqual(0x0);
     expect(cpu.flags.Z).toBe(true);
   });
   test('INC_ABSOLUTE_X Normal', () => {
@@ -1831,12 +1831,12 @@ describe('CPU DECREMENT & INCREMENT tests', () => {
     cpu.registers.X = 0x4;
     mem.memory[0x0] = OPCODES.INC_ABSOLUTE_X;
     mem.memory[0x1] = 0x33;
-    mem.memory[0x2] = 0x12;
-    mem.memory[0x1237] = 0xda;
+    mem.memory[0x2] = 0x42;
+    mem.memory[0x4237] = 0xda;
     cpu.cycles = 7;
     cpu.execute();
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x1237]).toEqual(0xdb);
+    expect(mem.memory[0x4237]).toEqual(0xdb);
     expect(cpu.flags.Z).toBe(false);
   });
   test('INC_ZEROPAGE OVERFLOW TEST', () => {
@@ -1888,24 +1888,24 @@ describe('CPU DECREMENT & INCREMENT tests', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.DEC_ABSOLUTE;
     mem.memory[0x1] = 0x33;
-    mem.memory[0x2] = 0x12;
-    mem.memory[0x1233] = 0x0;
+    mem.memory[0x2] = 0x42;
+    mem.memory[0x4233] = 0x0;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x1233]).toEqual(0xff);
+    expect(mem.memory[0x4233]).toEqual(0xff);
     expect(cpu.flags.Z).toBe(false);
   });
   test('DEC_ABSOLUTE Normal', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.DEC_ABSOLUTE;
     mem.memory[0x1] = 0x33;
-    mem.memory[0x2] = 0x12;
-    mem.memory[0x1233] = 0xdb;
+    mem.memory[0x2] = 0x42;
+    mem.memory[0x4233] = 0xdb;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x1233]).toEqual(0xda);
+    expect(mem.memory[0x4233]).toEqual(0xda);
     expect(cpu.flags.Z).toBe(false);
   });
   test('DEC_ABSOLUTE_X UNDERFLOW TEST', () => {
@@ -1913,12 +1913,12 @@ describe('CPU DECREMENT & INCREMENT tests', () => {
     cpu.registers.X = 0x2;
     mem.memory[0x0] = OPCODES.DEC_ABSOLUTE_X;
     mem.memory[0x1] = 0x33;
-    mem.memory[0x2] = 0x12;
-    mem.memory[0x1235] = 0x0;
+    mem.memory[0x2] = 0x42;
+    mem.memory[0x4235] = 0x0;
     cpu.cycles = 7;
     cpu.execute();
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x1235]).toEqual(0xff);
+    expect(mem.memory[0x4235]).toEqual(0xff);
     expect(cpu.flags.Z).toBe(false);
   });
   test('DEC_ABSOLUTE_X Normal', () => {
@@ -1926,12 +1926,12 @@ describe('CPU DECREMENT & INCREMENT tests', () => {
     cpu.registers.X = 0x4;
     mem.memory[0x0] = OPCODES.DEC_ABSOLUTE_X;
     mem.memory[0x1] = 0x33;
-    mem.memory[0x2] = 0x12;
-    mem.memory[0x1237] = 0xdc;
+    mem.memory[0x2] = 0x42;
+    mem.memory[0x4237] = 0xdc;
     cpu.cycles = 7;
     cpu.execute();
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x1237]).toEqual(0xdb);
+    expect(mem.memory[0x4237]).toEqual(0xdb);
     expect(cpu.flags.Z).toBe(false);
   });
   test('DEC_ZEROPAGE UNDERFLOW TEST', () => {
@@ -2624,8 +2624,8 @@ describe('CPU CMP tests', () => {
     mem.memory[0x0] = OPCODES.CMP_INDEXED_INDIRECT_X;
     mem.memory[0x1] = 0x4;
     mem.memory[0x14] = 0x69; // no wrap
-    mem.memory[0x15] = 0x32; // 0x3269
-    mem.memory[0x3269] = 0x44;
+    mem.memory[0x15] = 0x42; // 0x3269
+    mem.memory[0x4269] = 0x44;
     cpu.cycles = 6;
     cpu.execute();
     expect(cpu.flags.C).toBe(true);
@@ -3158,7 +3158,7 @@ describe('BIT tests', () => {
   });
 });
 
-describe.only('Memory Mirroring tests', () => {
+describe('Memory Mirroring tests', () => {
   test('PPU 0x2008 Gets mirrored to 0x2000', () => {
     cpu.reset();
     cpu.registers.A = 0x11;
