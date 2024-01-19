@@ -3,7 +3,7 @@ import { CPU, OPCODES } from '../cpu/Cpu';
 import { MemoryBus } from '../cpu/MemoryBus';
 
 let mem = new MemoryBus();
-let cpu = new CPU(mem);
+let cpu = new CPU(mem); // TÄÄ KOKO PASKA TOIMII VANHALLA ARKKITEHTUURILLA, oikeesti pitäs olla memory.cpu
 describe('CPU LDA tests', () => {
   test('LDA_IMMEDIATE', () => {
     cpu.reset();
@@ -2057,26 +2057,26 @@ describe('CPU ASL tests', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.ASL_ABSOLUTE;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x3369] = 0x27;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x4369] = 0x27;
     cpu.cycles = 6;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x3369]).toEqual(0x4e);
+    expect(mem.memory[0x4369]).toEqual(0x4e);
     expect(cpu.flags.C).toEqual(false);
   });
   test('ASL_ABSOLUTE CARRY', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.ASL_ABSOLUTE;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x3369] = 0x91;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x4369] = 0x91;
     cpu.cycles = 6;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x3369]).toEqual(0x22);
+    expect(mem.memory[0x4369]).toEqual(0x22);
     expect(cpu.flags.C).toEqual(true);
   });
   test('ASL_ABSOLUTE_X NO CARRY', () => {
@@ -2084,13 +2084,13 @@ describe('CPU ASL tests', () => {
     cpu.registers.X = 0x2;
     mem.memory[0x0] = OPCODES.ASL_ABSOLUTE_X;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x336b] = 0x27;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x436b] = 0x27;
     cpu.cycles = 7;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x336b]).toEqual(0x4e);
+    expect(mem.memory[0x436b]).toEqual(0x4e);
     expect(cpu.flags.C).toEqual(false);
   });
   test('ASL_ABSOLUTE_X CARRY', () => {
@@ -2098,13 +2098,13 @@ describe('CPU ASL tests', () => {
     cpu.registers.X = 0x2;
     mem.memory[0x0] = OPCODES.ASL_ABSOLUTE_X;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x336b] = 0x91;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x436b] = 0x91;
     cpu.cycles = 7;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x336b]).toEqual(0x22);
+    expect(mem.memory[0x436b]).toEqual(0x22);
     expect(cpu.flags.C).toEqual(true);
   });
 });
@@ -2185,26 +2185,26 @@ describe('CPU LSR tests', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.LSR_ABSOLUTE;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x3369] = 0x28;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x4369] = 0x28;
     cpu.cycles = 6;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x3369]).toEqual(0x14);
+    expect(mem.memory[0x4369]).toEqual(0x14);
     expect(cpu.flags.C).toEqual(false);
   });
   test('LSR_ABSOLUTE CARRY', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.LSR_ABSOLUTE;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x3369] = 0x27;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x4369] = 0x27;
     cpu.cycles = 6;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x3369]).toEqual(0x13);
+    expect(mem.memory[0x4369]).toEqual(0x13);
     expect(cpu.flags.C).toEqual(true);
   });
   test('LSR_ABSOLUTE_X NO CARRY', () => {
@@ -2212,13 +2212,13 @@ describe('CPU LSR tests', () => {
     cpu.registers.X = 0x2;
     mem.memory[0x0] = OPCODES.LSR_ABSOLUTE_X;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x336b] = 0x44;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x436b] = 0x44;
     cpu.cycles = 7;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x336b]).toEqual(0x22);
+    expect(mem.memory[0x436b]).toEqual(0x22);
     expect(cpu.flags.C).toEqual(false);
   });
   test('LSR_ABSOLUTE_X CARRY', () => {
@@ -2226,13 +2226,13 @@ describe('CPU LSR tests', () => {
     cpu.registers.X = 0x2;
     mem.memory[0x0] = OPCODES.LSR_ABSOLUTE_X;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x336b] = 0x45;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x436b] = 0x45;
     cpu.cycles = 7;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x336b]).toEqual(0x22);
+    expect(mem.memory[0x436b]).toEqual(0x22);
     expect(cpu.flags.C).toEqual(true);
   });
 });
@@ -2314,26 +2314,26 @@ describe('CPU ROL tests', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.ROL_ABSOLUTE;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x3369] = 0x28;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x4369] = 0x28;
     cpu.cycles = 6;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x3369]).toEqual(0x50);
+    expect(mem.memory[0x4369]).toEqual(0x50);
     expect(cpu.flags.C).toEqual(false);
   });
   test('ROL_ABSOLUTE CARRY', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.ROL_ABSOLUTE;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x3369] = 0xa3;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x4369] = 0xa3;
     cpu.cycles = 6;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x3369]).toEqual(0x46);
+    expect(mem.memory[0x4369]).toEqual(0x46);
     expect(cpu.flags.C).toEqual(true);
   });
   test('ROL_ABSOLUTE_X NO CARRY', () => {
@@ -2342,13 +2342,13 @@ describe('CPU ROL tests', () => {
     cpu.flags.C = true;
     mem.memory[0x0] = OPCODES.ROL_ABSOLUTE_X;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x336b] = 0x44;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x436b] = 0x44;
     cpu.cycles = 7;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x336b]).toEqual(0x89);
+    expect(mem.memory[0x436b]).toEqual(0x89);
     expect(cpu.flags.C).toEqual(false);
   });
   test('ROL_ABSOLUTE_X CARRY', () => {
@@ -2356,13 +2356,13 @@ describe('CPU ROL tests', () => {
     cpu.registers.X = 0x2;
     mem.memory[0x0] = OPCODES.ROL_ABSOLUTE_X;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x336b] = 0xbc;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x436b] = 0xbc;
     cpu.cycles = 7;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x336b]).toEqual(0x78);
+    expect(mem.memory[0x436b]).toEqual(0x78);
     expect(cpu.flags.C).toEqual(true);
   });
 });
@@ -2445,13 +2445,13 @@ describe('CPU ROR tests', () => {
     cpu.reset();
     mem.memory[0x0] = OPCODES.ROR_ABSOLUTE;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x3369] = 0x28;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x4369] = 0x28;
     cpu.cycles = 6;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x3369]).toEqual(0x14);
+    expect(mem.memory[0x4369]).toEqual(0x14);
     expect(cpu.flags.C).toEqual(false);
   });
   test('ROR_ABSOLUTE CARRY', () => {
@@ -2459,13 +2459,13 @@ describe('CPU ROR tests', () => {
     cpu.flags.C = true;
     mem.memory[0x0] = OPCODES.ROR_ABSOLUTE;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x3369] = 0xa3;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x4369] = 0xa3;
     cpu.cycles = 6;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x3369]).toEqual(0xd1);
+    expect(mem.memory[0x4369]).toEqual(0xd1);
     expect(cpu.flags.C).toEqual(true);
   });
   test('ROR_ABSOLUTE_X NO CARRY', () => {
@@ -2473,13 +2473,13 @@ describe('CPU ROR tests', () => {
     cpu.registers.X = 0x2;
     mem.memory[0x0] = OPCODES.ROR_ABSOLUTE_X;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x336b] = 0x44;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x436b] = 0x44;
     cpu.cycles = 7;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x336b]).toEqual(0x22);
+    expect(mem.memory[0x436b]).toEqual(0x22);
     expect(cpu.flags.C).toEqual(false);
   });
   test('ROR_ABSOLUTE_X CARRY', () => {
@@ -2488,13 +2488,13 @@ describe('CPU ROR tests', () => {
     cpu.flags.C = true;
     mem.memory[0x0] = OPCODES.ROR_ABSOLUTE_X;
     mem.memory[0x1] = 0x69;
-    mem.memory[0x2] = 0x33; //0x3369
-    mem.memory[0x336b] = 0xbc;
+    mem.memory[0x2] = 0x43; //0x3369
+    mem.memory[0x436b] = 0xbc;
     cpu.cycles = 7;
     cpu.execute();
 
     expect(cpu.cycles).toBe(0);
-    expect(mem.memory[0x336b]).toEqual(0xde);
+    expect(mem.memory[0x436b]).toEqual(0xde);
     expect(cpu.flags.C).toEqual(false);
   });
 });
@@ -3154,6 +3154,20 @@ describe('BIT tests', () => {
     expect(cpu.flags.N).toBe(true);
     expect(cpu.flags.Z).toBe(false);
     expect(cpu.flags.V).toBe(true);
+    expect(cpu.cycles).toBe(0);
+  });
+});
+
+describe.only('Memory Mirroring tests', () => {
+  test('PPU 0x2008 Gets mirrored to 0x2000', () => {
+    cpu.reset();
+    cpu.registers.A = 0x11;
+    mem.memory[0x0] = OPCODES.STA_ABSOLUTE;
+    mem.memory[0x1] = 0x08;
+    mem.memory[0x2] = 0x20; //0x2008 = 0x2000
+    cpu.cycles = 4;
+    cpu.execute();
+    expect(mem.memory[0x2000]).toEqual(0x11);
     expect(cpu.cycles).toBe(0);
   });
 });

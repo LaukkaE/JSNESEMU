@@ -3,7 +3,6 @@ import { PPU } from './Ppu';
 
 class MemoryBus {
   memory = new Uint8Array(1024 * 64); //addressable space 0x0 - 0xffff
-  //0x00-
   CPU: CPU;
   PPU: PPU;
   constructor() {
@@ -11,12 +10,6 @@ class MemoryBus {
     this.PPU = new PPU(this);
   }
 
-  setPPU(PPU: PPU) {
-    this.PPU = PPU;
-  }
-  setCPU(CPU: CPU) {
-    this.CPU = CPU;
-  }
   triggerNMI() {
     if (!this.CPU) {
       throw 'No CPU initialized';
@@ -36,6 +29,10 @@ class MemoryBus {
     this.memory[address] = vector >> 8;
   }
   writeByte(address: number, value: number) {
+    if (address >= 0x2000 && address <= 0x3fff) {
+      //PPU MIRRORING
+      address &= 0x2007; //0x2000 - 0x2007 alue mirrorattu 0x3fff asti
+    }
     this.memory[address] = value;
   }
   loadProgram(rom: Uint8Array) {
