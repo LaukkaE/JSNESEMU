@@ -1,5 +1,3 @@
-// import { MemoryBus } from '../cpu/Cpu';
-
 import { MemoryBus } from '../cpu/MemoryBus';
 
 type Props = { SP: number; memory: MemoryBus };

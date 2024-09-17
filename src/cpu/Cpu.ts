@@ -278,8 +278,9 @@ class CPU {
     this.flags.V = (Byte & 0x40) > 0;
     this.flags.N = (Byte & 0x80) > 0;
   }
+
+  // fetch byte from mem using PC, takes 1 cycle
   getByte() {
-    // fetch byte from mem using PC, takes 1 cycle
     // let byte = this.memoryBus.memory[this.PC];
     let byte = this.memoryBus.readByte(this.PC);
     this.PC++;
@@ -287,8 +288,9 @@ class CPU {
     this.elapsedCycles++;
     return byte;
   }
+
+  // fetch 16 bit vector from mem, takes 2 cycles
   getVector() {
-    //fetch 16 bit vector from mem, takes 2 cycles
     let firstByte = this.memoryBus.readByte(this.PC);
     this.PC++;
     let secondByte = this.memoryBus.readByte(this.PC);
@@ -297,8 +299,9 @@ class CPU {
     this.elapsedCycles += 2;
     return firstByte | (secondByte << 8);
   }
+
+  //read 16 bit vector from mem, takes 2 cycles
   readVector(address: number) {
-    //read 16 bit vector from mem, takes 2 cycles
     let firstByte = this.memoryBus.readByte(address); //jos kutsutaan zero pagelle 0xff niin wrap zeropagen alkuun
     let nextAddress = address !== 0xff ? address + 1 : (address + 1) & 0xff;
     let secondByte = this.memoryBus.readByte(nextAddress);
@@ -307,8 +310,8 @@ class CPU {
     return firstByte | (secondByte << 8);
   }
 
+  // read byte from mem, takes 1 cycle,
   readByte(address: number) {
-    // read byte from mem, takes 1 cycle,
     let byte = this.memoryBus.readByte(address);
     this.cycles--;
     this.elapsedCycles++;
@@ -351,6 +354,7 @@ class CPU {
     this.flags.N = (result & 0x80) > 0;
     return result;
   }
+
   //Rotate Right Register & Flags
   setRORFlagsAndReturnValue(value: number) {
     let result = value >> 1; //shift bits to right
@@ -361,6 +365,7 @@ class CPU {
     this.flags.N = (result & 0x80) > 0;
     return result;
   }
+
   //Add with Carry Register & Flags
   setADCRegisterAndFlags(value: number) {
     let ABefore = this.registers.A;
@@ -372,6 +377,7 @@ class CPU {
     this.flags.V =
       ((ABefore ^ sumofAddition) & (value ^ sumofAddition) & 0x80) > 0; //When adding two signed numbers results in > 127 ($7F) or < -128 ($80), V is set
   }
+
   //Subtract with Carry Register & Flags
   setSBCRegisterAndFlags(value: number) {
     let ABefore = this.registers.A;
@@ -385,6 +391,7 @@ class CPU {
       ((ABefore ^ subtractedValue) & (subtractedValue ^ flippedValue) & 0x80) >
       0; //Same as ADC (?)
   }
+
   getBranchOffset() {
     let offset = this.getByte();
     if (offset & 0x80) {
@@ -392,36 +399,43 @@ class CPU {
     }
     return offset;
   }
+
   pushVectorToStack(vector: number) {
     this.memoryBus.writeVector(vector, this.SP);
     this.SP -= 2;
   }
+
   pushByteToStack(byte: number) {
     this.memoryBus.writeByte(this.SP, byte);
     this.SP--;
   }
+
   pullByteFromStack() {
     let byte = this.readByte(this.SP + 1); //+1
     this.SP++;
     return byte;
   }
+
   pullVectorFromStack() {
     let vector = this.readVector(this.SP + 1); //+1
     this.SP += 2;
     return vector;
   }
+
   //CMP,CPY,CPX Flags
   setCompareFlags(register: number, memoryByte: number) {
     this.flags.C = register >= memoryByte;
     this.flags.Z = register === memoryByte;
     this.flags.N = ((register - memoryByte) & 0x80) > 0;
   }
+
+  //Zero page ends at 0xff, wrap if overflow instead of exiting zero page
   zeroPageWrappingCheck(zeroPageAddress: number, Xregister: number) {
-    //Zero page ends at 0xff, wrap if overflow instead of exiting zero page
     return (zeroPageAddress + Xregister) & 0xff;
   }
+
+  //6502 Spends an extra cycle if memory "page" switches high byte of memory address is the "page"
   pageCrossBoundaryCheck(address: number, secondAddress: number) {
-    //6502 Spends an extra cycle if memory "page" switches high byte of memory address is the "page"
     if ((secondAddress & 0xff00) !== (address & 0xff00)) {
       this.cycles--;
       this.elapsedCycles++;
@@ -437,6 +451,7 @@ class CPU {
     );
     return this.readByte(zeroPageAddressWithOffset);
   }
+
   //Returns byte from memory with absolute addressing mode, offset used for ABSOLUTE_X and ABSOLUTE_Y
   returnAbsoluteAddressingData(offset = 0) {
     let address = this.getVector();
@@ -449,6 +464,7 @@ class CPU {
       return this.readByte(address);
     }
   }
+
   //Returns byte from memory with Indexed indirect X mode
   returnIndexedIndirectAddressingData() {
     let zeroPageAddress = this.getByte();
@@ -459,6 +475,7 @@ class CPU {
     let vector = this.readVector(zeroPageAddressX);
     return this.readByte(vector);
   }
+  
   //Returns byte from memory with Indirect Indexed Y mode
   returnIndirectIndexedAddressingData() {
     let zeroPageAddress = this.getByte();

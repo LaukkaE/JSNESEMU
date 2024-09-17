@@ -19,7 +19,7 @@ class MemoryBus {
   resetMemory() {
     this.memory = new Uint8Array(1024 * 64).fill(0x00);
   }
-  checkAddressMirroring(address: number) {
+  checkAddressMirroring(address: number) { //voi olla et nää on päin vittua
     if (address >= 0x0 && address <= 0x1fff) {
       address &= 0x07ff; // 0x0 - 0x07ff mirrorattu 0x1ff asti
     } else if (address >= 0x2000 && address <= 0x3fff) {
@@ -29,12 +29,7 @@ class MemoryBus {
     return address;
   }
   writeVector(vector: number, address: number) {
-    //mirroring TODO sama writebyteen
-    //if(address >= 0x0 && address <= 0x1fff){
-    //address &= 0x07ff
-    //}
-    //lisäks PPU range 0x2000-0x2007 mirroraus 0x3fff asti
-    address = this.checkAddressMirroring(address);
+    address = this.checkAddressMirroring(address); //mahd bug
     this.memory[address - 1] = vector & 0xff;
     this.memory[address] = vector >> 8;
   }
