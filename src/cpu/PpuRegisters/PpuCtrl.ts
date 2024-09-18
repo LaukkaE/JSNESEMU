@@ -72,10 +72,12 @@ class PPUCTRL {
   }
 
   getGenerateVBlankNmi(): number {
+    //vaihto booleaniin?
     return this.bitflags.GENERATE_NMI;
   }
 
   getMasterSlaveSelect(): number {
+    //vaihto booleaniin?
     return this.bitflags.PPU_MASTER_SLAVE_SELECT;
   }
 

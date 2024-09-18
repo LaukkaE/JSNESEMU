@@ -1,5 +1,6 @@
 import { MemoryBus } from './MemoryBus';
-import { PPUCTRL } from './PpuRegisters/Ppuctrl';
+import { PPUCTRL } from './PpuRegisters/PpuCtrl';
+import { PPUMASK } from './PpuRegisters/PpuMask';
 
 class PPU {
   vram = new Uint8Array(2048).fill(0); //oikeesti 2000 -- 3eff
@@ -10,6 +11,8 @@ class PPU {
 
   //Registers
   PPUCTRL = new PPUCTRL();
+  PPUMASK = new PPUMASK();
+
   constructor(memoryBus: MemoryBus) {
     this.memoryBus = memoryBus;
   }
