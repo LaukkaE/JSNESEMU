@@ -6,7 +6,7 @@
 class PPUADDR {
   lowByte = 0x0;
   highbyte = 0x0;
-  highPointer = true; //true = write to high byte first
+  highPointer = true; //tää on ehkä "internal registers w" eli write latch
 
   getAddress(): number {
     return (this.highbyte << 8) | this.lowByte;
@@ -21,15 +21,30 @@ class PPUADDR {
     } else {
       this.lowByte = byte;
     }
-    //Valid addresses are $0000–$3FFF; higher addresses will be mirrored down. TODO: TESTIT TÄHÄN
-    if (this.getAddress() > 0x3fff) {
-      this.setAddress(this.getAddress() & 0x3fff);
-    }
+    this.validAddressCheck();
 
     this.highPointer = !this.highPointer;
   }
+
+  //Valid addresses are $0000–$3FFF; higher addresses will be mirrored down. TODO: TESTIT TÄHÄN
+  validAddressCheck() {
+    if (this.getAddress() > 0x3fff) {
+      this.setAddress(this.getAddress() & 0x3fff);
+    }
+  }
   resetPointer() {
     this.highPointer = true;
+  }
+  //Also note that read or write access to 0x2007 increments the PPU Address (0x2006).
+  //The increment size is determined by the state of the Control register (0x2000): (Either 1 or 32)
+  incrementValue(amount: number) {
+    // TODO TESTS!!!!
+    let low = this.lowByte + amount; // amount = 1 or 32
+    this.lowByte = low &= 0xff;
+    if (low > 0xff) {
+      this.highbyte = (this.highbyte + 1) & 0xff;
+    }
+    this.validAddressCheck();
   }
 }
 
