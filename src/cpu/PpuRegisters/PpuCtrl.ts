@@ -44,41 +44,39 @@ class PPUCTRL {
   }
 
   getSpriteSize(): number {
-    if (this.bitflags.SPRITE_HEIGHT === 1) {
+    if (this.bitflags.SPRITE_HEIGHT) {
       return 16;
     }
     return 8;
   }
 
   getVramAddrIncrement(): number {
-    if (this.bitflags.VRAM_INCREMENT_MODE === 1) {
+    if (this.bitflags.VRAM_INCREMENT_MODE) {
       return 32;
     }
     return 1;
   }
 
   getBgPatternAddr(): number {
-    if (this.bitflags.BG_TILE_SELECT === 1) {
+    if (this.bitflags.BG_TILE_SELECT) {
       return 0x1000;
     }
     return 0;
   }
 
   getSpritePatternAddr(): number {
-    if (this.bitflags.SPRITE_TILE_SELECT === 1) {
+    if (this.bitflags.SPRITE_TILE_SELECT) {
       return 0x1000;
     }
     return 0;
   }
 
-  getGenerateVBlankNmi(): number {
-    //vaihto booleaniin?
-    return this.bitflags.GENERATE_NMI;
+  getGenerateVBlankNmi(): boolean {
+    return !!this.bitflags.GENERATE_NMI;
   }
 
-  getMasterSlaveSelect(): number {
-    //vaihto booleaniin?
-    return this.bitflags.PPU_MASTER_SLAVE_SELECT;
+  getMasterSlaveSelect(): boolean {
+    return !!this.bitflags.PPU_MASTER_SLAVE_SELECT;
   }
 
   update(value: number) {
